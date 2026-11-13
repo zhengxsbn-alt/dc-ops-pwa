@@ -1,0 +1,10 @@
+{
+  "name": "AHU健康度评估",
+  "short_name": "AHU评估",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#2563EB",
+  "icons": []
+}

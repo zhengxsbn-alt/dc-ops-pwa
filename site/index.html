@@ -1,0 +1,3986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#F97316">
+<title>机房选址考察记录</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<link rel="manifest" href="manifest-inspection.json">
+<link rel="apple-touch-icon" href="icon-inspection-192.png">
+<style>
+:root{
+  --primary:#F97316;--primary-light:#FB923C;--primary-dark:#EA580C;
+  --primary-bg:#FFF7ED;--bg:#F1F5F9;--card:#FFF;--text:#1E293B;--text2:#64748B;--border:#E2E8F0;
+  --danger:#EF4444;--warn:#F59E0B;--success:#22C55E;--radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;
+  max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:72px;overflow-x:hidden}
+input,textarea,select,button{font-family:inherit;font-size:14px}
+textarea{resize:vertical;min-height:60px}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+  background:#F8FAFC;transition:border-color .2s}
+.fab-voice{position:fixed;right:16px;width:50px;height:50px;border-radius:50%;
+  border:none;background:linear-gradient(135deg,#F97316,#EA580C);color:#FFF;font-size:24px;
+  cursor:pointer;z-index:200;box-shadow:0 4px 14px rgba(249,115,22,.45);
+  display:flex;align-items:center;justify-content:center;transition:bottom .15s}
+.fab-voice:active{transform:scale(.92)}
+.fab-voice.recording{background:linear-gradient(135deg,#EF4444,#DC2626);animation:fabPulse 1.2s infinite}
+.fab-voice .fab-quota{position:absolute;top:-6px;right:-6px;background:#1F2937;color:#FFF;
+  font-size:9px;padding:1px 4px;border-radius:8px;line-height:14px;white-space:nowrap;pointer-events:none}
+@keyframes fabPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 10px rgba(239,68,68,0)}}
+.voice-target{border:2px solid #F97316 !important;background:#FFF7ED !important;box-shadow:0 0 0 3px rgba(249,115,22,.25);animation:voiceTargetPulse 1.5s infinite}
+@keyframes voiceTargetPulse{0%,100%{box-shadow:0 0 0 3px rgba(249,115,22,.25)}50%{box-shadow:0 0 0 6px rgba(249,115,22,.1)}}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);background:#FFF}
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#FFF;padding:12px 16px;position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;gap:8px}
+.header-left{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+.header-left input{background:transparent;border:none;color:#FFF;font-size:14px;
+  font-weight:600;flex:1;min-width:0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.3)}
+.header-left input::placeholder{color:rgba(255,255,255,.6)}
+.header-left input:focus{outline:none;border-bottom-color:#FFF}
+.hint{font-size:12px;color:#6B7280;background:#F0F9FF;border-left:3px solid #3B82F6;padding:6px 10px;margin:0 0 6px;border-radius:0 4px 4px 0;line-height:1.5}
+.issue-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px}
+.issue-row textarea{flex:1}
+.issue-del{flex-shrink:0;margin-top:4px;padding:4px 8px}
+.issue-entry{margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--g200)}
+.issue-photos{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.issue-photos .photo-wrap{position:relative;width:60px;height:45px}
+.issue-photos .photo-wrap img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+.issue-photos .photo-wrap .photo-del{position:absolute;top:-4px;right:-4px;width:16px;height:16px;font-size:8px;padding:0;line-height:16px;border-radius:50%;background:var(--err);color:#fff;border:none;cursor:pointer}
+.issue-photos .photo-add{width:60px;height:45px;border:1px dashed var(--g300);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--g400);cursor:pointer;position:relative;overflow:hidden}
+.issue-photos .photo-add input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative}
+.header-right .btn-clear{position:relative;z-index:2}
+.completion{font-size:12px;color:rgba(255,255,255,.85);font-weight:600;
+  background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px}
+.btn-clear{background:rgba(255,255,255,.2);border:none;color:#FFF;
+  padding:6px 12px;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap;
+  min-height:32px;min-width:32px;display:inline-flex;align-items:center;justify-content:center}
+.btn-clear:active{background:rgba(255,255,255,.35)}
+.progress-bar{height:3px;background:rgba(0,0,0,.1)}
+.progress-fill{height:100%;background:#FFF;border-radius:2px;transition:width .3s}
+.tab-content{display:none;padding:12px}
+.tab-content.active{display:block;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;background:var(--card);
+  display:flex;border-top:1px solid var(--border);z-index:100;
+  padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px 0 6px;cursor:pointer;color:var(--text2);transition:color .2s;
+  border:none;background:none;font-size:10px}
+.nav-item.active{color:var(--primary)}
+.nav-item .icon{font-size:20px;margin-bottom:2px}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;
+  margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card-title{font-size:15px;font-weight:600;color:var(--primary);
+  display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.form-group{margin-bottom:10px}
+.form-group label{display:block;font-size:13px;font-weight:500;
+  color:var(--text2);margin-bottom:4px}
+.section-header{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;background:linear-gradient(135deg,#EFF6FF,#DBEAFE);
+  border-radius:var(--radius);margin-bottom:8px;cursor:pointer;
+  transition:all .2s;user-select:none}
+.section-header:active{transform:scale(.98)}
+.section-header h3{font-size:14px;font-weight:600;color:var(--primary-dark);
+  display:flex;align-items:center;gap:6px;flex:1}
+.section-header .arrow{transition:transform .3s;font-size:12px;color:var(--primary)}
+.section-header.open .arrow{transform:rotate(180deg)}
+.info-section-header{background:linear-gradient(135deg,#FFF7ED,#FED7AA)!important;border:1px solid #FDBA74}
+.info-section-header h3{color:#C2410C!important}
+.info-section-header .arrow{color:#C2410C!important}
+.more-btn{font-size:18px;font-weight:700;line-height:1}
+.more-menu{display:none;position:absolute;top:100%;right:0;margin-top:6px;background:var(--card);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.15);min-width:140px;z-index:150;overflow:hidden;padding:4px 0}
+.more-menu.show{display:block}
+.more-menu-item{padding:10px 16px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;white-space:nowrap}
+.more-menu-item:active{background:#F1F5F9}
+.more-menu-item.more-menu-danger{color:var(--danger)}
+.more-menu-divider{height:1px;background:var(--border);margin:4px 0}
+.section-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.section-body.open{max-height:8000px}
+.sub-item{background:var(--card);border-radius:var(--radius);padding:12px;
+  margin-bottom:8px;border:1px solid var(--border)}
+.sub-item-title{font-size:13px;font-weight:600;color:var(--text);
+  margin-bottom:8px;display:flex;align-items:center;gap:4px}
+.room-card{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px;margin-bottom:10px}
+.room-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-weight:600;font-size:15px;color:#1E40AF}
+.photo-grid{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.photo-thumb{width:56px;height:56px;border-radius:6px;object-fit:cover;
+  cursor:pointer;border:2px solid var(--border);transition:border-color .2s}
+ .photo-thumb:active{border-color:var(--primary)}
+ .photo-thumb[src=""]{display:none}.photo-add{width:56px;height:56px;border-radius:6px;border:2px dashed var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:22px;color:var(--text2);background:#F8FAFC;transition:all .2s;position:relative;overflow:hidden}
+.photo-add:active{border-color:var(--primary);color:var(--primary)}
+.photo-add input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-wrap{position:relative}
+.photo-del{position:absolute;top:-6px;right:-6px;width:18px;height:18px;
+  border-radius:50%;background:var(--danger);color:#FFF;border:none;
+  font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1}
+.radio-group,.check-group{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.radio-label,.check-label{display:flex;align-items:center;gap:4px;
+  padding:6px 12px;border-radius:8px;border:1px solid var(--border);
+  cursor:pointer;font-size:13px;transition:all .2s;user-select:none}
+.radio-label:has(input:checked),.check-label:has(input:checked){
+  background:#EFF6FF;border-color:var(--primary);color:var(--primary)}
+.radio-label input,.check-label input{display:none}
+.num-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.num-row .form-group{flex:1;min-width:60px;margin-bottom:6px}
+.num-row .form-group label{font-size:11px}
+.num-row .form-group input{text-align:center}
+.total-badge{display:inline-flex;align-items:center;gap:4px;
+  padding:6px 12px;border-radius:8px;background:#EFF6FF;
+  color:var(--primary);font-weight:600;font-size:15px;margin:6px 0}
+.risk-card{background:var(--card);border-radius:var(--radius);padding:12px;
+  margin-bottom:10px;border-left:4px solid var(--warn);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.risk-card .risk-source{font-size:11px;color:var(--text2);margin-bottom:4px}
+.risk-card .risk-actions{display:flex;justify-content:flex-end;margin-top:8px}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;
+  font-size:13px;font-weight:500;transition:all .2s}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--primary);color:#FFF}
+.btn-primary:active{background:var(--primary-dark)}
+.btn-danger{background:var(--danger);color:#FFF}
+.btn-danger:active{background:#DC2626}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-block{width:100%;padding:12px;text-align:center;font-size:15px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal-box{background:var(--card);border-radius:16px;padding:20px;
+  width:100%;max-width:320px;text-align:center;transform:scale(.9);transition:transform .25s}
+.modal-overlay.show .modal-box{transform:scale(1)}
+.modal-box h4{margin-bottom:8px;font-size:16px}
+.modal-box p{color:var(--text2);font-size:13px;margin-bottom:16px}
+.cloud-modal-box .btn-row{display:flex;gap:10px;justify-content:center}
+#cloudToast.show{opacity:1!important}
+.photo-viewer{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:300;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.photo-viewer.show{opacity:1;pointer-events:auto}
+.photo-viewer img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:8px}
+.photo-viewer .close-btn{position:absolute;top:16px;right:16px;
+  width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);
+  color:#FFF;border:none;font-size:20px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center}
+.cond-input{margin-top:6px;display:none}
+.cond-input.show{display:block}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .icon{font-size:40px;margin-bottom:8px}
+.export-info{text-align:center;padding:30px 20px}
+.export-info .icon{font-size:48px;margin-bottom:12px}
+.export-info h3{margin-bottom:8px}
+.export-info p{color:var(--text2);margin-bottom:20px;font-size:13px;line-height:1.8}
+.cloud-settings{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--border)}
+.cloud-settings-title{font-size:15px;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.cloud-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.cloud-row span{font-size:13px;color:var(--text)}
+.toggle-switch{position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch .slider{position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:26px;transition:.3s}
+.toggle-switch .slider::before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#FFF;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked+.slider{background:var(--primary)}
+.toggle-switch input:checked+.slider::before{transform:translateX(22px)}
+.cloud-config-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .2s}
+.cloud-config-btn:active{background:var(--primary);color:#FFF;border-color:var(--primary)}
+.cloud-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.cloud-modal-overlay.show{opacity:1;pointer-events:auto}
+.cloud-modal-box{background:var(--card);border-radius:16px;padding:20px;width:100%;max-width:320px;transform:scale(.9);transition:transform .25s}
+.cloud-modal-overlay.show .cloud-modal-box{transform:scale(1)}
+.cloud-modal-box h4{margin-bottom:12px;font-size:16px;text-align:center}
+.cloud-modal-box .form-group{margin-bottom:10px}
+.cloud-modal-box .btn-row{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.cloud-status{font-size:11px;color:var(--text2);margin-top:4px}
+/* Auth Screen */
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow-y:auto}
+.auth-overlay.hidden{display:none}
+.auth-card{width:90%;max-width:380px;background:var(--card);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);overflow:hidden;margin:20px 0}
+.auth-header{text-align:center;padding:28px 20px 16px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff}
+.auth-header h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.auth-header p{font-size:13px;opacity:.85}
+.auth-tabs{display:flex;border-bottom:2px solid var(--border)}
+.auth-tab{flex:1;padding:12px 0;text-align:center;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.auth-tab.on{color:var(--primary);border-bottom-color:var(--primary)}
+.auth-body{padding:20px}
+.auth-pane{display:none}
+.auth-pane.on{display:block}
+.auth-fg{margin-bottom:14px}
+.auth-fg label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.auth-fg input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;transition:border-color .2s}
+.auth-fg input:focus{border-color:var(--primary)}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.auth-btn:active{transform:scale(.97)}
+.auth-btn-pri{background:var(--primary);color:#fff}
+.auth-btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.auth-code-box{background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;font-size:12px;word-break:break-all;color:var(--text);margin-top:10px;position:relative}
+.auth-code-box .copy-btn{position:absolute;top:8px;right:8px;background:var(--primary);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.auth-wait{text-align:center;padding:20px 0;color:var(--text2);font-size:14px}
+.auth-wait .spinner{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:authSpin 1s linear infinite;margin-bottom:8px}
+@keyframes authSpin{to{transform:rotate(360deg)}}
+.auth-err{color:var(--danger);font-size:13px;margin-top:8px;display:none}
+.auth-err.show{display:block}
+/* Admin Panel Modal */
+.admin-modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:5000;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center}
+.admin-modal.show{display:flex}
+.admin-box{width:92%;max-width:420px;background:var(--card);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.2);max-height:80vh;overflow-y:auto}
+.admin-box-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.admin-box-hdr h3{font-size:16px;font-weight:600;color:var(--text)}
+.admin-close{background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;padding:4px}
+.admin-box-body{padding:20px}
+.admin-sec{margin-bottom:20px}
+.admin-sec h4{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.admin-user-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px}
+.admin-user-name{font-size:14px;color:var(--text)}
+.admin-user-id{font-size:11px;color:var(--text2)}
+.admin-revoke-btn{background:none;border:1px solid var(--danger);color:var(--danger);padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+.admin-revoke-btn:active{background:var(--danger);color:#fff}
+</style>
+</head>
+<body>
+<!-- Auth Screen Overlay -->
+<div class="auth-overlay hidden" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2 id="authTitle">🏗️ 机房选址考察记录</h2>
+      <p>请登录后使用</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab on" id="authTabUser">用户登录</button>
+      <button class="auth-tab" id="authTabAdmin">管理员登录</button>
+    </div>
+    <div class="auth-body">
+      <!-- User login pane -->
+      <div class="auth-pane on" id="authPaneUser">
+        <div class="auth-fg">
+          <label>用户名</label>
+          <input type="text" id="authName" placeholder="请输入用户名" autocomplete="off">
+        </div>
+        <div class="auth-fg">
+          <label>密码</label>
+          <input type="password" id="authUserPwd" placeholder="请输入密码">
+        </div>
+        <button class="auth-btn auth-btn-pri" id="authUserLoginBtn">登录</button>
+        <div class="auth-err" id="authUserErr"></div>
+      </div>
+      <!-- Admin login pane -->
+      <div class="auth-pane" id="authPaneAdmin">
+        <div id="authAdminSetup" style="display:none">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:10px">首次使用，请设置管理员密码：</div>
+          <div class="auth-fg">
+            <label>设置密码</label>
+            <input type="password" id="authSetupPwd" placeholder="请设置管理员密码">
+          </div>
+          <div class="auth-fg">
+            <label>确认密码</label>
+            <input type="password" id="authSetupPwd2" placeholder="再次输入密码">
+          </div>
+          <button class="auth-btn auth-btn-pri" id="authSetupBtn">确认设置</button>
+          <div class="auth-err" id="authSetupErr"></div>
+        </div>
+        <div id="authAdminLogin">
+          <div class="auth-fg">
+            <label>管理员密码</label>
+            <input type="password" id="authAdminPwd" placeholder="请输入管理员密码">
+          </div>
+          <button class="auth-btn auth-btn-pri" id="authAdminLoginBtn">登录</button>
+          <div class="auth-err" id="authAdminErr"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Force Change Password Modal -->
+<div class="admin-modal" id="changePwdModal">
+  <div class="admin-box">
+    <div class="admin-box-hdr">
+      <h3>🔑 修改密码</h3>
+    </div>
+    <div class="admin-box-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px">首次登录需修改初始密码：</div>
+      <div class="auth-fg">
+        <label>新密码</label>
+        <input type="password" id="forceNewPwd" placeholder="请输入新密码（至少4位）">
+      </div>
+      <div class="auth-fg">
+        <label>确认新密码</label>
+        <input type="password" id="forceNewPwd2" placeholder="再次输入新密码">
+      </div>
+      <button class="auth-btn auth-btn-pri" id="forceChangePwdBtn">修改密码</button>
+      <div class="auth-err" id="forcePwdErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Panel Modal -->
+<div class="admin-modal" id="adminModal">
+  <div class="admin-box">
+    <div class="admin-box-hdr">
+      <h3>👥 权限管理</h3>
+      <button class="admin-close" id="adminCloseBtn">&times;</button>
+    </div>
+    <div class="admin-box-body">
+      <div class="admin-sec">
+        <h4>➕ 创建用户</h4>
+        <div class="auth-fg">
+          <label>用户名</label>
+          <input type="text" id="adminNewName" placeholder="输入用户名" autocomplete="off">
+        </div>
+        <div class="auth-fg">
+          <label>初始密码</label>
+          <input type="password" id="adminNewPwd" placeholder="设置初始密码">
+        </div>
+        <div class="auth-fg">
+          <label>密码有效期（小时）</label>
+          <input type="number" id="adminPwdExpire" value="24" min="1" max="720" placeholder="24">
+        </div>
+        <button class="auth-btn auth-btn-pri" id="adminCreateBtn">创建用户</button>
+        <div class="auth-err" id="adminCreateErr"></div>
+      </div>
+      <div class="admin-sec">
+        <h4>👥 用户列表</h4>
+        <div id="adminUserList"></div>
+      </div>
+      <div class="admin-sec">
+        <h4>🔑 修改管理员密码</h4>
+        <div class="auth-fg">
+          <label>当前密码</label>
+          <input type="password" id="adminOldPwd" placeholder="输入当前密码">
+        </div>
+        <div class="auth-fg">
+          <label>新密码</label>
+          <input type="password" id="adminNewPwd2" placeholder="输入新密码">
+        </div>
+        <button class="auth-btn auth-btn-pri" id="adminPwdBtn">修改密码</button>
+        <div class="auth-err" id="adminPwdErr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <input type="text" id="titleInput" placeholder="机房名称" autocomplete="off">
+  </div>
+  <div class="header-right">
+    <button class="btn-clear" id="btnHome" title="返回主页">🏠</button>
+    <button class="btn-clear" id="btnCheck" title="未填写项检查">🔍</button>
+    <span class="completion" id="completionBadge">0%</span>
+    <button class="btn-clear more-btn" id="btnMore" title="更多">⋮</button>
+    <div class="more-menu" id="moreMenu">
+      <div class="more-menu-item" id="menuHelp">❓ 使用说明</div>
+      <div class="more-menu-item" id="menuVer">v61</div>
+      <div class="more-menu-divider"></div>
+      <div class="more-menu-item" id="menuGenIssues">🐛 问题生成</div>
+      <div class="more-menu-divider"></div>
+      <div class="more-menu-item" id="menuAuthMgmt" style="display:none">👥 权限管理</div>
+      <div class="more-menu-item" id="menuLogout" style="display:none">🚪 退出登录</div>
+      <div class="more-menu-divider"></div>
+      <div class="more-menu-item more-menu-danger" id="menuClear">🗑️ 清空数据</div>
+    </div>
+  </div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<!-- Tab 1: 勘察记录 -->
+<div class="tab-content active" id="tabRecord">
+  <div class="card">
+    <div class="section-header open info-section-header" data-sec="info">
+      <h3>3.0 机房信息 📋</h3><span class="arrow">▼</span>
+    </div>
+    <div class="section-body open" data-sec-body="info">
+    <div class="form-group" style="margin-top:8px">
+      <label>机房名称</label>
+      <input type="text" id="f_name" placeholder="请输入机房名称" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>考察时间</label>
+      <input type="date" id="f_date">
+    </div>
+    <div class="form-group">
+      <label>机房地址</label>
+      <input type="text" id="f_address" placeholder="请输入机房地址" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>机房投产时间</label>
+      <input type="text" id="f_prodDate" placeholder="如：2024年1月" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>手续（总能耗指标）</label>
+      <input type="text" id="f_procedure" placeholder="如：20MVA" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>建筑情况</label>
+      <input type="text" id="f_building" placeholder="如：已建成1栋机房楼，地上5层" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>规模概况</label>
+      <input type="text" id="f_scale" placeholder="如：4416个6KW机柜" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>机电概况</label>
+      <input type="text" id="f_mechElec" placeholder="如：3路外市电引入，每路20MVA" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>我方技术需求</label>
+      <input type="text" id="f_demand" placeholder="如：32台GM504+40个8kW机柜" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>认证</label>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:4px">
+        <label style="font-size:13px"><input type="radio" name="f_cqcCert" id="f_cqcCert_yes" value="是"> 已取得CQC-A级</label>
+        <label style="font-size:13px"><input type="radio" name="f_cqcCert" id="f_cqcCert_no" value="否"> 未取得</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>运维人员概括</label>
+      <input type="text" id="f_staffSummary" placeholder="如：日常四班倒，3人值班；暖通电气工程师各一名" autocomplete="off">
+    </div>
+    <div style="background:#FFF7ED;border-radius:8px;padding:12px;margin:8px 0;border:1px solid #FDBA74">
+      <div style="font-size:14px;font-weight:600;color:#C2410C;margin-bottom:8px">📊 机柜支持情况（由下方统计表自动汇总）</div>
+      <div class="form-group">
+        <label>折算参考功率（KW）</label>
+        <input type="number" id="f_refPower" placeholder="13" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>独立模块可用机柜数</label>
+        <input type="number" id="f_indepCabinets" readonly style="background:#F5F5F4">
+      </div>
+      <div class="form-group">
+        <label>折算参考机柜数</label>
+        <input type="number" id="f_convertA" readonly style="background:#F5F5F4">
+      </div>
+      <div class="form-group">
+        <label>非独立模块可用机柜总数</label>
+        <input type="number" id="f_nonIndepCabinets" readonly style="background:#F5F5F4">
+      </div>
+      <div class="form-group">
+        <label>折算参考A机柜数(非独立)</label>
+        <input type="number" id="f_nonIndepA" readonly style="background:#F5F5F4">
+      </div>
+      <div class="form-group">
+        <label>改造周期</label>
+        <input type="text" id="f_convertCycle" placeholder="如：T+2" autocomplete="off">
+      </div>
+    </div>
+    <div id="cabinetTableInfo"></div>
+    <div style="background:#F0F9FF;border-radius:8px;padding:12px;margin:8px 0;border:1px solid #93C5FD">
+      <div style="font-size:14px;font-weight:600;color:#1D4ED8;margin-bottom:8px">📋 技术需求对比</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="background:#DBEAFE">
+          <th style="border:1px solid #93C5FD;padding:6px;text-align:left;width:20%">对比项</th>
+          <th style="border:1px solid #93C5FD;padding:6px;text-align:left;width:20%">技术需求</th>
+          <th style="border:1px solid #93C5FD;padding:6px;text-align:left;width:20%">机房可提供</th>
+          <th style="border:1px solid #93C5FD;padding:6px;text-align:left;width:15%">是否满足</th>
+          <th style="border:1px solid #93C5FD;padding:6px;text-align:left;width:25%">解决方案</th>
+        </tr>
+        <tr>
+          <td style="border:1px solid #93C5FD;padding:6px">配电容量</td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc0_need" style="width:100%;border:none;font-size:12px" placeholder="需求"></td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc0_provide" style="width:100%;border:none;font-size:12px" placeholder="可提供"></td>
+          <td style="border:1px solid #93C5FD;padding:4px">
+            <label style="font-size:11px"><input type="radio" name="dc0_satisfy" value="是" id="f_dc0_yes"> 是</label>
+            <label style="font-size:11px"><input type="radio" name="dc0_satisfy" value="否" id="f_dc0_no"> 否</label>
+          </td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc0_solution" style="width:100%;border:none;font-size:12px" placeholder="方案"></td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #93C5FD;padding:6px">制冷容量</td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc1_need" style="width:100%;border:none;font-size:12px" placeholder="需求"></td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc1_provide" style="width:100%;border:none;font-size:12px" placeholder="可提供"></td>
+          <td style="border:1px solid #93C5FD;padding:4px">
+            <label style="font-size:11px"><input type="radio" name="dc1_satisfy" value="是" id="f_dc1_yes"> 是</label>
+            <label style="font-size:11px"><input type="radio" name="dc1_satisfy" value="否" id="f_dc1_no"> 否</label>
+          </td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc1_solution" style="width:100%;border:none;font-size:12px" placeholder="方案"></td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #93C5FD;padding:6px">楼宇承重</td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc2_need" style="width:100%;border:none;font-size:12px" placeholder="需求"></td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc2_provide" style="width:100%;border:none;font-size:12px" placeholder="可提供"></td>
+          <td style="border:1px solid #93C5FD;padding:4px">
+            <label style="font-size:11px"><input type="radio" name="dc2_satisfy" value="是" id="f_dc2_yes"> 是</label>
+            <label style="font-size:11px"><input type="radio" name="dc2_satisfy" value="否" id="f_dc2_no"> 否</label>
+          </td>
+          <td style="border:1px solid #93C5FD;padding:4px"><input type="text" id="f_dc2_solution" style="width:100%;border:none;font-size:12px" placeholder="方案"></td>
+        </tr>
+      </table>
+      </div>
+    </div>
+    <div class="form-group">
+           <label>📷 现场照片 (最多10张)</label>
+           <div id="infoPhotos" class="photo-grid"></div>
+         </div>
+        </div>
+       </div>  <div id="sectionsContainer"></div>
+</div>
+
+<!-- Tab 2: 风险统计 -->
+<div class="tab-content" id="tabRisk">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="font-size:16px">⚠️ 风险统计</h3>
+    <button class="btn btn-primary btn-sm" id="btnAddRisk">+ 手动添加风险</button>
+  </div>
+  <div id="riskList"></div>
+</div>
+
+<!-- Tab 3: 结论 -->
+<div class="tab-content" id="tabConclusion">
+  <div class="card">
+    <div class="card-title">📋 勘察结论</div>
+    <div class="form-group">
+      <label>是否满足金山云选址标准</label>
+      <div class="radio-group" id="conclusionRadio">
+        <label class="radio-label"><input type="radio" name="conclusion" value="满足">✅ 满足</label>
+        <label class="radio-label"><input type="radio" name="conclusion" value="不满足">❌ 不满足</label>
+        <label class="radio-label"><input type="radio" name="conclusion" value="待定">⏳ 待定</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>结论描述</label>
+      <div class="hint">💡 请输入详细结论描述，如：1:机房不完全满足A级标准建设，存在高风险整改项；2:当前不满足金山云选址标准，需整改；3:工程建设质量一般</div>
+      <textarea id="conclusionDesc" rows="6"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 4: 导出 -->
+<div class="tab-content" id="tabExport">
+  <div class="cloud-settings">
+    <div class="cloud-settings-title">☁️ 云备份</div>
+    <div class="cloud-row">
+      <span>拍照自动云备份</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="cloudAutoUpload">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="cloud-status" id="cloudStatus">❌ 未登录云备份</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="cloud-config-btn" id="btnCloudLogin" onclick="openCloudLogin()" style="flex:1;min-width:60px">☁️ 设置</button>
+      <button class="cloud-config-btn" onclick="cloudBackup()" style="flex:1;min-width:60px;color:var(--primary);border-color:var(--primary)">☁️ 备份</button>
+      <button class="cloud-config-btn" onclick="cloudRestore()" style="flex:1;min-width:60px;color:var(--primary);border-color:var(--primary)">📥 恢复</button>
+      <button class="cloud-config-btn" onclick="cloudShareLink()" style="flex:1;min-width:60px;color:var(--primary);border-color:var(--primary)">🔗 分享</button>
+    </div>
+  </div>
+  <div class="export-info">
+    <div class="icon">📥</div>
+    <h3>导出勘察报告</h3>
+    <p>将所有勘察数据导出为Excel文件，包含机房信息及概况、风险统计和结论三个工作表，照片将嵌入对应单元格中。</p>
+    <button class="btn btn-primary btn-block" id="btnExport">📊 导出 Excel 报告</button>
+    <div style="height:12px"></div>
+    <p>将勘察数据导出为网页报告，手机浏览器直接打开查看，中文和照片完美显示。</p>
+         <button class="btn btn-primary btn-block" id="btnExportWord" style="background:#0D9488">📄 导出勘察报告</button>    <div style="height:12px"></div>
+    <p>将所有现场照片单独打包为ZIP文件备份，防止数据丢失。照片按栏目命名，方便查找。</p>
+         <button class="btn btn-primary btn-block" id="btnExportPhotos" style="background:#7C3AED">🖼️ 导出照片备份</button>
+          <div style="height:16px"></div>
+          <p>导出数据为JSON文件，可在电脑上用文本编辑器修改，或导入到其他设备继续填写。</p>
+          <button class="btn btn-primary btn-block" id="btnExportJson" style="background:#0891B2">💾 导出数据(JSON)</button>
+          <div style="height:12px"></div>
+          <p>导入之前导出的JSON数据文件，恢复所有填写内容继续编辑（当前数据将被覆盖）。</p>
+          <input type="file" id="importJsonFile" accept=".json" onchange="handleSiteJSONImport(event)" style="display:none">
+          <button class="btn btn-primary btn-block" style="background:#0891B2;margin-bottom:12px" onclick="document.getElementById('importJsonFile').click()">📁 选择文件导入</button>
+          <div style="text-align:center;color:var(--text2);font-size:12px;margin-bottom:10px">— 无法选文件时粘贴JSON —</div>
+          <textarea id="pasteJsonArea" placeholder='打开JSON文件，全选复制内容，粘贴到此处...' style="width:100%;height:120px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;resize:vertical;margin-bottom:8px;font-family:monospace"></textarea>
+          <button class="btn btn-primary btn-block" style="background:#0891B2" onclick="importSiteJSONFromText()">📋 从粘贴内容导入</button>
+         <div style="height:16px"></div>
+         <p>更新软件到最新版本，获取新功能和修复。</p>
+         <button class="btn btn-outline btn-block" id="btnCheckUpdate">🔄 检查并更新软件</button>  </div>
+</div>
+
+<!-- Report Modal -->
+<div id="reportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:#fff;flex-direction:column">
+  <div style="position:sticky;top:0;z-index:10;background:#F97316;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px">
+    <button id="btnCloseReport" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+    <span style="flex:1;font-weight:600;font-size:15px">勘察报告预览</span>
+    <button id="btnShareReport" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer">📤 分享</button>
+  </div>
+  <div id="reportContent" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+</div>
+
+<!-- FAB Voice Button -->
+<button class="fab-voice" id="fabVoice" tabindex="-1">🎤<span class="fab-quota" id="fabQuota">500</span></button>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-item active" data-tab="tabRecord"><span class="icon">📝</span>勘察记录</button>
+  <button class="nav-item" data-tab="tabRisk"><span class="icon">⚠️</span>风险统计</button>
+  <button class="nav-item" data-tab="tabConclusion"><span class="icon">📋</span>结论</button>
+  <button class="nav-item" data-tab="tabExport"><span class="icon">📥</span>导出</button>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-box" style="max-height:80vh;overflow-y:auto;text-align:left;line-height:1.7;font-size:13px">
+    <h4 style="text-align:center;margin-bottom:12px">📖 使用说明</h4>
+    <div style="background:#FFF7ED;border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #FDBA74">
+      <b>📱 概述</b><br>
+      机房选址考察记录工具，支持离线使用，数据保存在本地。
+    </div>
+    <b>🗂️ 四个标签页</b><br>
+    📋 <b>勘察记录</b> — 填写机房信息和各系统考察数据<br>
+    ⚠️ <b>风险统计</b> — 自动汇总问题记录为风险条目<br>
+    ✅ <b>结论</b> — 填写考察结论<br>
+    📥 <b>导出</b> — 多格式导出与数据备份<br><br>
+    <b>📋 勘察记录</b><br>
+    • 点击标题栏可<b>折叠/展开</b>各区域<br>
+    • 机房信息：名称、地址、投产时间、认证等<br>
+    • 机柜统计表：点击「＋ 添加行」录入，折算机柜数自动计算<br>
+    • 技术需求对比：配电/制冷/承重的需求与可提供对比<br>
+    • 各系统：配电⚡、IT模块🖥️、制冷❄️、人员👥、其他📌<br>
+    • IT模块和制冷支持<b>多房间</b>，点击「＋ 添加房间」<br>
+    • 每项支持：文字 + 照片 + 问题记录<br><br>
+    <b>🔍 未填写项检查</b><br>
+    • 点击标题栏「🔍」扫描未填写项<br>
+    • 点击条目自动跳转并高亮<br>
+    • 问题记录、其他考察项记录不计入<br><br>
+    <b>🎤 语音输入</b><br>
+    1. 点击输入框获得焦点<br>
+    2. 点击右下角橙色🎤按钮开始说话<br>
+    3. 再次点击结束，文字插入光标位置<br>
+    • 数字输入框自动将语音转数字<br>
+    • 按钮右上角显示当日剩余次数（500次/天）<br>
+    • 配额用完自动降级为浏览器语音<br><br>
+    <b>📥 导出功能</b><br>
+    • 📊 <b>Excel报告</b>：.xlsx 含照片<br>
+    • 📄 <b>网页报告</b>：.html 手机直接查看<br>
+    • 🖼️ <b>照片备份</b>：.zip 按栏目命名<br>
+    • 💾 <b>JSON导出</b>：完整数据，可跨设备迁移<br>
+    • 📂 <b>JSON导入</b>：恢复数据（覆盖当前）<br><br>
+    <b>☁️ 云备份</b><br>
+    将评估数据和照片备份到金山云KS3，防止手机丢失或换机导致数据丢失。<br><br>
+    <b>登录方式</b><br>
+    • 从DC运维终端进入PWA时<b>自动登录</b>，无需额外操作<br>
+    • 导出页 →「☁️ 设置」可查看登录状态和退出登录<br><br>
+    <b>手动备份</b><br>
+    • 导出页 →「☁️ 备份」→ 自动上传数据和照片到云端<br>
+    • 备份按机房名称+时间命名，可在云端查看历史备份<br><br>
+    <b>自动上传照片</b><br>
+    • 导出页 →「☁️ 设置」→ 开启「拍照自动云备份」开关<br>
+    • 开启后每次拍照自动上传到云端，无需手动操作<br><br>
+    <b>从云端恢复</b><br>
+    • 导出页 →「📥 恢复」→ 选择备份 → 下载数据覆盖本地<br>
+    • 适用于换机、数据迁移、多人协作场景<br><br>
+    <b>🗑️ 清空</b><br>
+    标题栏「🗑️」按钮清空所有数据（需确认）。<br><br>
+    <b>💾 数据安全</b><br>
+    文字存localStorage，照片存IndexedDB，PWA离线可用。建议定期JSON导出备份。<br><br>
+    <b>📱 安装为APP</b><br>
+    浏览器中选「添加到主屏幕」，全屏运行无地址栏。
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn btn-primary" id="btnCloseHelp" style="min-width:120px">知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h4 id="modalTitle">确认</h4>
+    <p id="modalMsg">确定要清空所有数据吗？此操作不可恢复。</p>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="modalCancel">取消</button>
+      <button class="btn btn-danger" id="modalConfirm">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Issues Modal -->
+<div class="modal-overlay" id="genIssuesModal">
+  <div class="modal-box">
+    <h4>🐛 问题生成</h4>
+    <p style="font-size:12px;color:var(--text-muted);margin:4px 0 12px">将风险记录推送到DC运维平台</p>
+    <div class="form-group">
+      <label>数据中心名称 *</label>
+      <input type="text" id="genDcName" placeholder="请输入数据中心中文名称" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>客户经理/整改人 *</label>
+      <input type="text" id="genDcAm" placeholder="请输入客户经理姓名" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>整改人电话</label>
+      <input type="tel" id="genDcAmPhone" placeholder="请输入整改人电话" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>整改人邮箱</label>
+      <input type="email" id="genDcAmEmail" placeholder="请输入整改人邮箱" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>一审人（可选）</label>
+      <input type="text" id="genDcManager" placeholder="请输入一审人姓名" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>预期完成日期（可选）</label>
+      <input type="date" id="genDcPfd">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="genIssuesCancel">取消</button>
+      <button class="btn btn-primary" id="genIssuesConfirm">推送</button>
+    </div>
+  </div>
+</div>
+
+<!-- Check Modal -->
+<div id="checkModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border-radius:16px;padding:20px;max-width:420px;max-height:80vh;width:100%;display:flex;flex-direction:column">
+    <h4 style="margin-bottom:8px;flex-shrink:0">🔍 未填写项检查</h4>
+    <div id="checkResult" style="flex:1;overflow-y:auto;font-size:13px;line-height:1.6"></div>
+    <div class="btn-row" style="flex-shrink:0;margin-top:10px">
+      <button class="btn btn-outline" id="checkClose" style="flex:1">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo Viewer -->
+<div class="photo-viewer" id="photoViewer">
+  <button class="close-btn" id="viewerClose">✕</button>
+  <img id="viewerImg" src="" alt="">
+</div>
+<div id="cloudToast" style="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#1F2937;color:#FFF;padding:8px 18px;border-radius:20px;font-size:13px;z-index:99999;transition:opacity .3s;pointer-events:none;white-space:nowrap;opacity:0"></div>
+
+<!-- Cloud Login Modal -->
+<div class="cloud-modal-overlay" id="cloudLoginModal">
+  <div class="cloud-modal-box">
+    <h4>☁️ 云备份设置</h4>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+      <span style="font-size:13px">拍照自动云备份</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="cloudAutoUpload">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="cloud-status" id="cloudStatus">❌ 未登录云备份</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="cloudLoginCancel" style="width:100%">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="cloud-modal-overlay" id="cloudBackupListModal">
+  <div class="cloud-modal-box" style="max-height:70vh;overflow-y:auto">
+    <h4 id="cloudBackupListTitle">📥 从云端恢复</h4>
+    <div id="cloudBackupEmpty" style="display:none;text-align:center;padding:20px;color:var(--g500);font-size:13px">暂无云端备份</div>
+    <div id="cloudBackupList"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="document.getElementById('cloudBackupListModal').classList.remove('show')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="cloud-modal-overlay" id="cloudShareModal">
+  <div class="cloud-modal-box">
+    <h4>🔗 分享链接</h4>
+    <p style="font-size:12px;color:var(--g500);text-align:center;margin:0 0 12px">链接7天有效，可发送给同事查看</p>
+    <input type="text" id="cloudShareUrl" readonly style="width:100%;padding:8px 10px;border:1px solid var(--g300);border-radius:6px;font-size:12px;background:var(--g100)">
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="document.getElementById('cloudShareModal').classList.remove('show')">关闭</button>
+      <button class="btn btn-primary" onclick="copyShareUrl()">复制链接</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+<script>
+// Global error catcher for debugging
+window.onerror=function(msg,url,line,col,err){alert('JS Error: '+msg+' (line '+line+')');};
+window.onunhandledrejection=function(e){alert('Promise Error: '+(e.reason&&e.reason.message||e.reason));};
+(function(){
+'use strict';
+
+var LS_KEY = 'dc_site_inspection';
+var IDB_NAME = 'dc_site_insp_photos';
+var IDB_VER = 1;
+var photoDB = null;
+
+function openPhotoDB(cb){
+  if(photoDB){cb(photoDB);return;}
+  try{
+    var req=indexedDB.open(IDB_NAME,IDB_VER);
+    req.onupgradeneeded=function(e){e.target.result.createObjectStore('photos',{keyPath:'key'});};
+    req.onsuccess=function(e){photoDB=e.target.result;cb(photoDB);};
+    req.onerror=function(){cb(null);};
+  }catch(e){cb(null);}
+}
+
+function savePhotoToIDB(key,base64,cb){
+  openPhotoDB(function(db){
+    if(!db){cb&&cb();return;}
+    try{var tx=db.transaction('photos','readwrite');tx.objectStore('photos').put({key:key,data:base64});tx.oncomplete=function(){cb&&cb();};tx.onerror=function(){cb&&cb();};}catch(e){cb&&cb();}
+  });
+}
+
+function getPhotoFromIDB(key,cb){
+  openPhotoDB(function(db){
+    if(!db){cb(null);return;}
+    try{var tx=db.transaction('photos','readonly');var req=tx.objectStore('photos').get(key);req.onsuccess=function(){cb(req.result?req.result.data:null);};req.onerror=function(){cb(null);};}catch(e){cb(null);}
+  });
+}
+
+function deletePhotoFromIDB(key,cb){
+  openPhotoDB(function(db){
+    if(!db){cb&&cb();return;}
+    try{var tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(key);tx.oncomplete=function(){cb&&cb();};tx.onerror=function(){cb&&cb();};}catch(e){cb&&cb();}
+  });
+}
+
+function clearAllPhotoIDB(cb){
+  openPhotoDB(function(db){
+    if(!db){cb&&cb();return;}
+    try{var tx=db.transaction('photos','readwrite');tx.objectStore('photos').clear();tx.oncomplete=function(){cb&&cb();};tx.onerror=function(){cb&&cb();};}catch(e){cb&&cb();}
+  });
+}
+
+function stripPhotosFromObj(obj){
+  if(!obj||typeof obj!=='object')return;
+  if(Array.isArray(obj)){
+    for(var i=0;i<obj.length;i++){
+      if(typeof obj[i]==='string'&&obj[i].indexOf('data:image')===0){
+        obj[i]='';
+      }else if(obj[i]&&typeof obj[i]==='object'){
+        stripPhotosFromObj(obj[i]);
+      }
+    }
+  }else{
+    var keys=Object.keys(obj);
+    for(var k=0;k<keys.length;k++){
+      var v=obj[keys[k]];
+      if(typeof v==='string'&&v.indexOf('data:image')===0){
+        obj[keys[k]]='';
+      }else if(v&&typeof v==='object'){
+        stripPhotosFromObj(v);
+      }
+    }
+  }
+}
+
+function collectPhotosFromObj(obj,path){
+  var result=[];
+  if(!obj||typeof obj!=='object')return result;
+  if(Array.isArray(obj)){
+    for(var i=0;i<obj.length;i++){
+      var p=path+'.'+i;
+      if(typeof obj[i]==='string'&&obj[i].indexOf('data:image')===0){
+        result.push({key:p,data:obj[i]});
+      }else if(obj[i]&&typeof obj[i]==='object'){
+        result=result.concat(collectPhotosFromObj(obj[i],p));
+      }
+    }
+  }else{
+    var keys=Object.keys(obj);
+    for(var k=0;k<keys.length;k++){
+      var v=obj[keys[k]];
+      var p2=path+'.'+keys[k];
+      if(typeof v==='string'&&v.indexOf('data:image')===0){
+        result.push({key:p2,data:v});
+      }else if(v&&typeof v==='object'){
+        result=result.concat(collectPhotosFromObj(v,p2));
+      }
+    }
+  }
+  return result;
+}
+
+function collectAllPhotos(){
+  var photos=[];
+  photos=photos.concat(collectPhotosFromObj(state.info,'info'));
+  SECTIONS.forEach(function(sec){
+    sec.items.forEach(function(item){
+      var sd=state.sections[sec.id]&&state.sections[sec.id][item.id];
+      if(sd) photos=photos.concat(collectPhotosFromObj(sd,'sections.'+sec.id+'.'+item.id));
+    });
+    if(sec.roomItems&&state.sections[sec.id]&&state.sections[sec.id].rooms){
+      state.sections[sec.id].rooms.forEach(function(room,ri){
+        sec.roomItems.forEach(function(ri_item){
+          var rd=room.items&&room.items[ri_item.id];
+          if(rd) photos=photos.concat(collectPhotosFromObj(rd,'sections.'+sec.id+'.rooms.'+ri+'.items.'+ri_item.id));
+        });
+      });
+    }
+  });
+  photos=photos.concat(collectPhotosFromObj(state.risks,'risks'));
+  return photos;
+}
+
+var _saveTimer=null;
+function saveState(){
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(doSaveState,200);
+}
+
+function doSaveState(){
+  // Collect all photos from state
+  var allPhotos=collectAllPhotos();
+  var currentKeys=allPhotos.map(function(p){return p.key;});
+
+  // Save text data to localStorage (photos stripped to save space)
+  var stateCopy=JSON.parse(JSON.stringify(state));
+  stripPhotosFromObj(stateCopy);
+  stripPhotosFromObj(stateCopy.info);
+  stateCopy._photoKeys=currentKeys;
+  try{localStorage.setItem(LS_KEY,JSON.stringify(stateCopy));}catch(e){}
+
+  // Save each photo to IndexedDB
+  allPhotos.forEach(function(p){
+    savePhotoToIDB(p.key,p.data);
+  });
+
+  // Clean up orphaned photos in IndexedDB
+  var oldKeys=state._photoKeys||[];
+  oldKeys.forEach(function(ok){
+    if(currentKeys.indexOf(ok)<0){
+      deletePhotoFromIDB(ok);
+    }
+  });
+}
+
+var SECTIONS = [
+  {
+    id:'s_power', title:'3.1 配电系统 ⚡', items:[
+      {id:'i_extPower',label:'外市电引入情况',ph:'多少路外市电，每路电压等级，上级是否两个独立变电站'},
+      {id:'i_medVolt',label:'中压架构情况',ph:'是否2N架构，是否有中压母联且投用，两路物理隔离，IT变压器容量'},
+      {id:'i_diesel',label:'柴发配置情况',ph:'柴发类型高压/低压集装箱/室内，品牌，几用几备，单机功率，燃油后备时间，油罐地埋/地面，应急自动投切'},
+      {id:'i_lowVolt',label:'低压配置情况',ph:'UPS并机容量和台数，品牌，进出线是否断路器，电池品牌，电池监控，电池组独立空开，低压侧双路物理隔离'},
+      {id:'i_powerOther',label:'其他考察项记录',ph:'非标考察项或其他问题备注'}
+    ]
+  },
+  {
+    id:'s_itRoom',title:'3.2 IT模块房间 🖥️', items:[
+      {id:'i_cabinetOverview',label:'可出租机柜概况',ph:'机房平面布置示意图，IT机房楼层位置和房间号，可出租机柜房间号/单柜功率/数量，白地板建设周期N+几，扩容空间和容量'},
+      {id:'i_otherIT',label:'其他考察项记录',ph:'其他问题或备注'}
+    ],
+    roomItems:[
+      {id:'i_cabinetPower',label:'机柜电力情况',ph:'房间编号，机柜功率和数量，机柜供电是否双U，PDU单相/三相，PDU条数，空开容量，插孔规格和数量，是否支持超电120%，列头柜进线空开容量'},
+      {id:'i_cabinetU',label:'机柜U位情况',ph:'总U位数量，实际可用U位，每U是否加1mm，底部/顶部起编',specialPhotos:['机柜底部照片','机柜顶部照片']},
+      {id:'i_hvac',label:'末端空调配置',ph:'空调类型房间级地板下送风/列间/风墙，单空调制冷量，同冷通道主备台数，品牌，是否做群控并机'},
+      {id:'i_airflow',label:'气流组织',ph:'封闭冷/热通道，房间冷通道/微模块数量'}
+    ]
+  },
+  {
+    id:'s_hvac',title:'3.3 暖通系统 ❄️', items:[
+      {id:'i_hvacArch',label:'暖通系统架构',ph:'冷冻侧一次泵/二次泵，冷却侧环网/单对单，蓄冷罐串联/并联，在线/离线，附BA界面'},
+      {id:'i_chiller',label:'冷机',ph:'单台制冷量，品牌，是否变频，冷冻水供回水温度，几用几备，板换是否配置'},
+      {id:'i_auxEquip',label:'辅助设备',ph:'冷冻定压补水几套，冷却水补水是否环网，后备水池时间，园区进水是否双路/环网，加药设备是否齐全'},
+      {id:'i_faultErg',label:'故障应急',ph:'冷机控制面板是否U电，冷冻泵供电是否U电，末端空调供电是否U电，电动阀供电是否U电，BA掉电设备和电动阀是否能自保持'},
+      {id:'i_coolTower',label:'冷塔',ph:'冷塔类型横流塔/逆流塔'},
+      {id:'i_ba',label:'BA/动环',ph:'是否配置，监控设备是否齐全'},
+      {id:'i_hvacOther',label:'其他考察项记录',ph:'非标考察项或其他问题备注'}
+    ]
+  },
+  {
+    id:'s_staff',title:'3.4 人员配置 👥', items:[
+      {id:'i_maintType',label:'自维or代维',type:'radio',options:['自维','代维'],noPhoto:true},
+      {id:'i_manager',label:'机房经理',type:'number',unit:'人',noPhoto:true},
+      {id:'i_engineer',label:'专业工程师',type:'number',unit:'人',checks:['电气','暖通','弱电','消防'],noPhoto:true},
+      {id:'i_duty',label:'值班班组',type:'duty',noPhoto:true},
+      {id:'i_maint',label:'维护班组',type:'number',unit:'人',noPhoto:true},
+      {id:'i_totalStaff',label:'总计人数',type:'total',readonly:true},
+      {id:'i_staffSatisfy',label:'人员是否满足运维需求',type:'radio',options:['是','否'],noPhoto:true},
+      {id:'i_staffIssues',label:'问题记录',type:'sectionIssues',sectionTitle:'人员配置'},
+      {id:'i_staffOther',label:'其他考察项记录',ph:'非标考察项或其他问题备注',noPhoto:true}
+    ]
+  },
+  {
+    id:'s_other',title:'3.5 其他 📌', items:[
+      {id:'i_cqc',label:'是否取得CQC A级认证',type:'radio',options:['是','否','审批中']},
+      {id:'i_isp',label:'三大运营商网络是否已接入',type:'checkbox',options:['移动','联通','电信']},
+      {id:'i_warehouse',label:'库房是否提供',type:'condRadio',options:['是','否'],condLabel:'面积'},
+      {id:'i_office',label:'办公室是否提供',type:'condRadio',options:['是','否'],condLabel:'面积/工位'},
+      {id:'i_otherOther',label:'其他考察项记录',ph:'非标考察项或其他问题备注'}
+    ]
+  }
+];
+
+var state = loadState();
+
+function defaultState(){
+  var s = {info:{name:'',date:'',address:'',prodDate:'',photos:[],procedure:'',building:'',scale:'',mechElec:'',demand:'',cqcCert:'',staffSummary:'',cabinetSummary:{indepCabinets:0,convertA:0,nonIndepCabinets:0,nonIndepA:0,convertCycle:'',refPower:13},demandCompare:[{item:'配电容量',need:'',provide:'',satisfy:'',solution:''},{item:'制冷容量',need:'',provide:'',satisfy:'',solution:''},{item:'楼宇承重',need:'',provide:'',satisfy:'',solution:''}],cabinetRows:[{roomId:'',cabinetPower:'',isIndepModule:'',cabinetCount:0,convertA:0}]},sections:{},risks:[],conclusion:{result:'',desc:''},_photoKeys:[]};
+  SECTIONS.forEach(function(sec){
+    s.sections[sec.id] = {};
+    sec.items.forEach(function(item){
+      var d = {text:'',photos:[],issues:[{text:'',photos:[]}]};
+      if(item.type==='radio') d = {value:'',photos:[],issues:[{text:'',photos:[]}]};
+      if(item.type==='checkbox') d = {values:[],photos:[],issues:[{text:'',photos:[]}]};
+      if(item.type==='number') d = {value:0,photos:[],issues:[{text:'',photos:[]}],checkValues:[]};
+      if(item.type==='duty') d = {perShift:0,shifts:0,shiftCount:0,total:0,photos:[],issues:[{text:'',photos:[]}]};
+      if(item.type==='total') d = {value:0,readonly:true};
+      if(item.type==='condRadio') d = {value:'',condText:'',photos:[],issues:[{text:'',photos:[]}]};
+      if(item.type==='sectionIssues') d = {issues:[{text:'',photos:[]}]};
+      if(item.specialPhotos) d.specialPhotos = item.specialPhotos.map(function(){return '';});
+      s.sections[sec.id][item.id] = d;
+    });
+  });
+  // Room items for s_itRoom
+  var itRoomSec = SECTIONS.find(function(s){return s.id==='s_itRoom';});
+  if(itRoomSec && itRoomSec.roomItems){
+    s.sections.s_itRoom.rooms = [{name:'', items:{}}];
+    itRoomSec.roomItems.forEach(function(ri){
+      var rd = {text:'',photos:[],issues:[{text:'',photos:[]}]};
+      if(ri.specialPhotos) rd.specialPhotos = ri.specialPhotos.map(function(){return '';});
+      s.sections.s_itRoom.rooms[0].items[ri.id] = rd;
+    });
+  }
+  return s;
+}
+
+function loadState(){
+  try{
+    var r=localStorage.getItem(LS_KEY);
+    if(r){
+      var s=JSON.parse(r);
+      migrateIssues(s);
+      // Check if this is old-format data (photos still in localStorage)
+      if(!s._photoKeys){
+        // Save old data as backup before first new-format save strips photos
+        try{localStorage.setItem(LS_KEY+'_old',r);}catch(e){}
+      }
+      return s;
+    }
+  }catch(e){}
+  return defaultState();
+}
+
+function restorePhotosFromIDB(){
+  var photoKeys=state._photoKeys;
+  if(!photoKeys||!photoKeys.length){
+    // Legacy: try to load old data that still has photos in localStorage
+    try{
+      var old=localStorage.getItem(LS_KEY+'_old');
+      if(old){
+        var oldState=JSON.parse(old);
+        mergePhotos(oldState,state);
+        localStorage.removeItem(LS_KEY+'_old');
+        doSaveState();
+        render();
+      }
+    }catch(e){}
+    return;
+  }
+  var loaded=0, total=photoKeys.length;
+  if(total===0)return;
+  photoKeys.forEach(function(fkey){
+    getPhotoFromIDB(fkey, function(data){
+      if(data){
+        setPhotoByKey(state,fkey,data);
+      }
+      loaded++;
+      if(loaded===total){
+        render();
+      }
+    });
+  });
+}
+
+function setPhotoByKey(obj,dotKey,base64){
+  var parts=dotKey.split('.');
+  // Convert numeric parts to numbers for array access
+  parts=parts.map(function(p){var n=Number(p);return isNaN(n)?p:n;});
+  if(!obj||parts.length===0)return;
+  var cur=obj;
+  for(var i=0;i<parts.length-1;i++){
+    if(cur[parts[i]]===undefined)return;
+    cur=cur[parts[i]];
+  }
+  cur[parts[parts.length-1]]=base64;
+}
+
+function mergePhotos(source,target){
+  if(!source||!target)return;
+  if(Array.isArray(source)&&Array.isArray(target)){
+    for(var i=0;i<source.length&&i<target.length;i++){
+      if(typeof source[i]==='string'&&source[i].indexOf('data:image')===0){
+        target[i]=source[i];
+      }else if(source[i]&&typeof source[i]==='object'&&target[i]&&typeof target[i]==='object'){
+        mergePhotos(source[i],target[i]);
+      }
+    }
+  }else if(typeof source==='object'&&typeof target==='object'){
+    Object.keys(source).forEach(function(k){
+      if(typeof source[k]==='string'&&source[k].indexOf('data:image')===0){
+        target[k]=source[k];
+      }else if(source[k]&&typeof source[k]==='object'&&target[k]&&typeof target[k]==='object'){
+        mergePhotos(source[k],target[k]);
+      }
+    });
+  }
+}
+
+function migrateIssues(s){
+  if(!s||!s.sections)return;
+  if(!s.info.photos)s.info.photos=[];
+  // v34: migrate new info fields
+  if(!s.info.procedure)s.info.procedure='';
+  if(!s.info.building)s.info.building='';
+  if(!s.info.scale)s.info.scale='';
+  if(!s.info.mechElec)s.info.mechElec='';
+  if(!s.info.demand)s.info.demand='';
+  if(!s.info.cqcCert)s.info.cqcCert='';
+  if(!s.info.staffSummary)s.info.staffSummary='';
+  if(!s.info.cabinetSummary)s.info.cabinetSummary={indepCabinets:0,convertA:0,nonIndepCabinets:0,nonIndepA:0,convertCycle:'',refPower:13};
+  // v36: migrate old field names
+  if(s.info.cabinetSummary.indep13kw!==undefined){s.info.cabinetSummary.convertA=s.info.cabinetSummary.indep13kw;delete s.info.cabinetSummary.indep13kw;}
+  if(s.info.cabinetSummary.indep15kw!==undefined){delete s.info.cabinetSummary.indep15kw;}
+  if(s.info.cabinetSummary.indepA!==undefined){s.info.cabinetSummary.convertA=s.info.cabinetSummary.indepA;delete s.info.cabinetSummary.indepA;}
+  if(s.info.cabinetSummary.indepB!==undefined){delete s.info.cabinetSummary.indepB;}
+  if(s.info.cabinetSummary.nonIndep13kw!==undefined){s.info.cabinetSummary.nonIndepA=s.info.cabinetSummary.nonIndep13kw;delete s.info.cabinetSummary.nonIndep13kw;}
+  if(s.info.cabinetSummary.nonIndepB!==undefined){delete s.info.cabinetSummary.nonIndepB;}
+  if(s.info.cabinetSummary.refPowerA!==undefined){s.info.cabinetSummary.refPower=s.info.cabinetSummary.refPowerA;delete s.info.cabinetSummary.refPowerA;}
+  if(s.info.cabinetSummary.refPowerB!==undefined){delete s.info.cabinetSummary.refPowerB;}
+  if(s.info.cabinetSummary.refPower===undefined)s.info.cabinetSummary.refPower=13;
+  if(!s.info.demandCompare)s.info.demandCompare=[{item:'配电容量',need:'',provide:'',satisfy:'',solution:''},{item:'制冷容量',need:'',provide:'',satisfy:'',solution:''},{item:'楼宇承重',need:'',provide:'',satisfy:'',solution:''}];
+  if(!s.info.cabinetRows)s.info.cabinetRows=[{roomId:'',cabinetPower:'',isIndepModule:'',cabinetCount:0,convertA:0}];
+  // v36: migrate old cabinetRows field names
+  s.info.cabinetRows.forEach(function(cr){
+    if(cr.convert13kw!==undefined){cr.convertA=cr.convert13kw;delete cr.convert13kw;}
+    if(cr.convert15kw!==undefined){delete cr.convert15kw;}
+    if(cr.convertB!==undefined){delete cr.convertB;}
+    if(cr.convertA===undefined)cr.convertA=0;
+  });  // Migrate old flat room items into rooms array
+  if(s.sections.s_itRoom && !s.sections.s_itRoom.rooms){
+    var roomItems = ['i_cabinetPower','i_cabinetU','i_hvac','i_airflow'];
+    var room = {name:'', items:{}};
+    roomItems.forEach(function(ri){
+      if(s.sections.s_itRoom[ri]){
+        room.items[ri] = s.sections.s_itRoom[ri];
+        delete s.sections.s_itRoom[ri];
+      }
+    });
+    s.sections.s_itRoom.rooms = [room];
+  }
+  // Migrate room item issues to object format
+  if(s.sections.s_itRoom && s.sections.s_itRoom.rooms){
+    s.sections.s_itRoom.rooms.forEach(function(room){
+      if(!room.items) room.items = {};
+      var itRoomSec = SECTIONS.find(function(s){return s.id==='s_itRoom';});
+      if(itRoomSec && itRoomSec.roomItems){
+        itRoomSec.roomItems.forEach(function(ri){
+          var rd = room.items[ri.id];
+          if(!rd) { rd = {text:'',photos:[],issues:[{text:'',photos:[]}]}; if(ri.specialPhotos) rd.specialPhotos = ri.specialPhotos.map(function(){return '';}); room.items[ri.id] = rd; }
+          if(typeof rd.issues==='string'){rd.issues=rd.issues?[{text:rd.issues,photos:[]}]:[{text:'',photos:[]}];}
+          if(Array.isArray(rd.issues)){
+            rd.issues=rd.issues.map(function(iss){
+              if(typeof iss==='string') return {text:iss,photos:[]};
+              if(!iss.photos) iss.photos=[];
+              return iss;
+            });
+          }
+          if(!rd.issues) rd.issues=[{text:'',photos:[]}];
+        });
+      }
+      // v34: migrate old room.cabinetRow to info.cabinetRows
+      if(room.cabinetRow){
+        s.info.cabinetRows.push({roomId:room.cabinetRow.roomId||'',cabinetPower:room.cabinetRow.cabinetPower||'',isIndepModule:room.cabinetRow.isIndepModule||'',cabinetCount:room.cabinetRow.cabinetCount||0,convertA:room.cabinetRow.convert13kw||room.cabinetRow.convertA||0});
+        delete room.cabinetRow;
+      }
+    });
+  }
+  // Ensure all SECTIONS items exist in state (handles newly added items)
+  SECTIONS.forEach(function(sec){
+    if(!s.sections[sec.id]) s.sections[sec.id]={};
+    sec.items.forEach(function(item){
+      var sd=s.sections[sec.id][item.id];
+      if(!sd){
+        var d={text:'',photos:[],issues:[{text:'',photos:[]}]};
+        if(item.type==='radio') d={value:'',photos:[],issues:[{text:'',photos:[]}]};
+        if(item.type==='checkbox') d={values:[],photos:[],issues:[{text:'',photos:[]}]};
+        if(item.type==='number') d={value:0,photos:[],issues:[{text:'',photos:[]}],checkValues:[]};
+        if(item.type==='duty') d={perShift:0,shifts:0,shiftCount:0,total:0,photos:[],issues:[{text:'',photos:[]}]};
+        if(item.type==='total') d={value:0,readonly:true};
+        if(item.type==='condRadio') d={value:'',condText:'',photos:[],issues:[{text:'',photos:[]}]};
+        if(item.type==='sectionIssues') d={issues:[{text:'',photos:[]}]};
+        if(item.specialPhotos) d.specialPhotos=item.specialPhotos.map(function(){return '';});
+        s.sections[sec.id][item.id]=d;
+        sd=d;
+      }
+      if(typeof sd.issues==='string'){sd.issues=sd.issues?[{text:sd.issues,photos:[]}]:[];}
+      if(Array.isArray(sd.issues)){
+        sd.issues=sd.issues.map(function(iss){
+          if(typeof iss==='string') return {text:iss,photos:[]};
+          if(!iss.photos) iss.photos=[];
+          return iss;
+        });
+      }
+      if(!sd.issues)sd.issues=[{text:'',photos:[]}];
+    });
+  });
+}
+
+function render(){
+  renderInfo();
+  renderSections();
+  renderRisks();
+  renderConclusion();
+  updateProgress();
+  updateVoiceQuotaDisplay();
+}
+
+function renderInfo(){
+  document.getElementById('titleInput').value = state.info.name;
+  document.getElementById('f_name').value = state.info.name;
+  document.getElementById('f_date').value = state.info.date;
+  document.getElementById('f_address').value = state.info.address;
+  document.getElementById('f_prodDate').value = state.info.prodDate;
+  document.getElementById('f_procedure').value = state.info.procedure||'';
+  document.getElementById('f_building').value = state.info.building||'';
+  document.getElementById('f_scale').value = state.info.scale||'';
+  document.getElementById('f_mechElec').value = state.info.mechElec||'';
+  document.getElementById('f_demand').value = state.info.demand||'';
+  if(state.info.cqcCert==='是') document.getElementById('f_cqcCert_yes').checked=true;
+  else if(state.info.cqcCert==='否') document.getElementById('f_cqcCert_no').checked=true;
+  document.getElementById('f_staffSummary').value = state.info.staffSummary||'';
+  document.getElementById('f_refPower').value = state.info.cabinetSummary.refPower||13;
+  document.getElementById('f_indepCabinets').value = state.info.cabinetSummary.indepCabinets||0;
+  document.getElementById('f_convertA').value = state.info.cabinetSummary.convertA||0;
+  document.getElementById('f_nonIndepCabinets').value = state.info.cabinetSummary.nonIndepCabinets||0;
+  document.getElementById('f_nonIndepA').value = state.info.cabinetSummary.nonIndepA||0;
+  document.getElementById('f_convertCycle').value = state.info.cabinetSummary.convertCycle||'';
+  // Demand compare table
+  for(var di=0;di<3;di++){
+    var dc=state.info.demandCompare[di];
+    if(dc){
+      var needEl=document.getElementById('f_dc'+di+'_need');
+      var provEl=document.getElementById('f_dc'+di+'_provide');
+      var solEl=document.getElementById('f_dc'+di+'_solution');
+      if(needEl)needEl.value=dc.need||'';
+      if(provEl)provEl.value=dc.provide||'';
+      if(solEl)solEl.value=dc.solution||'';
+      if(dc.satisfy==='是')document.getElementById('f_dc'+di+'_yes').checked=true;
+      else if(dc.satisfy==='否')document.getElementById('f_dc'+di+'_no').checked=true;
+    }
+  }
+  renderInfoPhotos();
+  renderCabinetTableInfo();
+}
+
+function renderInfoPhotos(){
+  var c = document.getElementById('infoPhotos');
+  var h = '';
+  (state.info.photos||[]).forEach(function(p,i){
+    h += '<div class="photo-wrap"><img class="photo-thumb" src="'+p+'" data-view="1"><button class="photo-del info-photo-del" data-pidx="'+i+'">✕</button></div>';
+  });
+  if(!state.info.photos || state.info.photos.length < 10){
+    h += '<label class="photo-add">📷<input type="file" accept="image/*" id="infoPhotoInput"></label>';
+  }
+  c.innerHTML = h;
+  bindInfoPhotoEvents();
+}
+
+function bindInfoPhotoEvents(){
+  var inp = document.getElementById('infoPhotoInput');
+  if(inp) inp.addEventListener('change', function(){
+    var file=this.files[0]; if(!file)return;
+    this.value='';
+    compressPhoto(file,function(b64){
+      if(!state.info.photos) state.info.photos=[];
+      if(state.info.photos.indexOf(b64)===-1){
+        state.info.photos.push(b64);
+        cloudAutoUpload(b64,'info.photos.'+(state.info.photos.length-1));
+      }
+      saveState(); renderInfoPhotos(); updateProgress();
+    });
+  });
+  document.querySelectorAll('.info-photo-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var idx=Number(this.getAttribute('data-pidx'));
+      state.info.photos.splice(idx,1);
+      saveState(); renderInfoPhotos(); updateProgress();
+    });
+  });
+}
+
+function renderCabinetTableInfo(){
+  var c = document.getElementById('cabinetTableInfo');
+  if(!c) return;
+  var crows=state.info.cabinetRows||[{roomId:'',cabinetPower:'',isIndepModule:'',cabinetCount:0,convertA:0}];
+  var rp=state.info.cabinetSummary.refPower||13;
+  var h='<div style="background:#FFF7ED;border-radius:8px;padding:10px;margin:8px 0;border:1px solid #FDBA74">';
+  h+='<div style="font-size:14px;font-weight:600;color:#C2410C;margin-bottom:8px">📊 机柜功率统计</div>';
+  h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  h+='<tr style="background:#FED7AA"><th style="border:1px solid #FDBA74;padding:4px">机房编号</th><th style="border:1px solid #FDBA74;padding:4px">单机柜功率KW</th><th style="border:1px solid #FDBA74;padding:4px">是否独立模块</th><th style="border:1px solid #FDBA74;padding:4px">可用机柜数量</th><th style="border:1px solid #FDBA74;padding:4px">折算'+rp+'KW</th><th style="border:1px solid #FDBA74;padding:4px;width:36px"></th></tr>';
+  crows.forEach(function(cr,ci){
+    h+='<tr>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px"><input type="text" data-crt="'+ci+'" data-crf="roomId" value="'+esc(cr.roomId)+'" style="width:100%;border:none;font-size:11px" placeholder="编号"></td>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px"><input type="text" data-crt="'+ci+'" data-crf="cabinetPower" value="'+esc(cr.cabinetPower)+'" style="width:100%;border:none;font-size:11px" placeholder="KW"></td>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px"><label style="font-size:10px"><input type="radio" name="cr_indep_'+ci+'" value="是" data-crt="'+ci+'" data-crf="isIndepModule_yes"'+(cr.isIndepModule==='是'?' checked':'')+'> 是</label><label style="font-size:10px"><input type="radio" name="cr_indep_'+ci+'" value="否" data-crt="'+ci+'" data-crf="isIndepModule_no"'+(cr.isIndepModule==='否'?' checked':'')+'> 否</label></td>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px"><input type="number" data-crt="'+ci+'" data-crf="cabinetCount" value="'+(cr.cabinetCount||0)+'" style="width:100%;border:none;font-size:11px" placeholder="0"></td>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px"><input type="number" data-crt="'+ci+'" data-crf="convertA" value="'+(cr.convertA||0)+'" style="width:100%;border:none;font-size:11px" placeholder="0"></td>';
+    h+='<td style="border:1px solid #FDBA74;padding:4px;text-align:center"><button class="btn btn-danger btn-sm" data-cr-del="'+ci+'" style="font-size:10px;padding:2px 6px">✕</button></td>';
+    h+='</tr>';
+  });
+  var totalCabinets=0,totalA=0;
+  crows.forEach(function(cr){totalCabinets+=Number(cr.cabinetCount)||0;totalA+=Number(cr.convertA)||0;});
+  h+='<tr style="background:#FFF7ED;font-weight:600"><td style="border:1px solid #FDBA74;padding:4px" colspan="3">合计</td><td style="border:1px solid #FDBA74;padding:4px">'+totalCabinets+'</td><td style="border:1px solid #FDBA74;padding:4px">'+totalA+'</td><td style="border:1px solid #FDBA74;padding:4px"></td></tr>';
+  h+='</table></div>';
+  h+='<button id="btnAddCrRow" style="color:#C2410C;background:#FFF7ED;border:1px dashed #FDBA74;margin-top:6px;width:100%;padding:6px;font-size:12px;border-radius:4px">＋ 添加行</button>';
+  h+='</div>';
+  c.innerHTML=h;
+  bindCabinetTableEvents();
+}
+
+function bindCabinetTableEvents(){
+  var crInputs=document.querySelectorAll('[data-crt][data-crf]');
+  crInputs.forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var ci=Number(this.getAttribute('data-crt'));
+      var fld=this.getAttribute('data-crf');
+      if(!state.info.cabinetRows[ci])return;
+      if(fld==='cabinetCount'||fld==='convertA'){
+        state.info.cabinetRows[ci][fld]=Number(this.value)||0;
+      }else if(fld==='isIndepModule_yes'){
+        state.info.cabinetRows[ci].isIndepModule='是';
+      }else if(fld==='isIndepModule_no'){
+        state.info.cabinetRows[ci].isIndepModule='否';
+      }else{
+        state.info.cabinetRows[ci][fld]=this.value;
+      }
+      recalcCabinetSummary(); saveState();
+    });
+    inp.addEventListener('change',function(){
+      var ci=Number(this.getAttribute('data-crt'));
+      var fld=this.getAttribute('data-crf');
+      if(!state.info.cabinetRows[ci])return;
+      if(fld==='isIndepModule_yes'){
+        state.info.cabinetRows[ci].isIndepModule='是'; recalcCabinetSummary(); saveState();
+      }else if(fld==='isIndepModule_no'){
+        state.info.cabinetRows[ci].isIndepModule='否'; recalcCabinetSummary(); saveState();
+      }
+    });
+  });
+  document.querySelectorAll('[data-cr-del]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var ci=Number(this.getAttribute('data-cr-del'));
+      state.info.cabinetRows.splice(ci,1);
+      recalcCabinetSummary(); saveState(); renderCabinetTableInfo();
+    });
+  });
+  var addCrBtn=document.getElementById('btnAddCrRow');
+  if(addCrBtn){
+    addCrBtn.addEventListener('click',function(){
+      if(!state.info.cabinetRows) state.info.cabinetRows=[];
+      state.info.cabinetRows.push({roomId:'',cabinetPower:'',isIndepModule:'',cabinetCount:0,convertA:0});
+      saveState(); renderCabinetTableInfo();
+    });
+  }
+}
+
+function renderSections(){
+  var c = document.getElementById('sectionsContainer');
+  c.innerHTML = '';
+  SECTIONS.forEach(function(sec){
+    var div = document.createElement('div');
+    div.className = 'card';
+    var openCls = sec._open ? ' open' : '';
+    var html = '<div class="section-header'+openCls+'" data-sec="'+sec.id+'">'+
+      '<h3>'+sec.title+'</h3><span class="arrow">▼</span></div>'+
+      '<div class="section-body'+openCls+'" data-sec-body="'+sec.id+'">';
+    sec.items.forEach(function(item){
+      html += renderSubItem(sec, item);
+    });
+    if(sec.roomItems){
+      var rooms = state.sections[sec.id].rooms || [{name:'',items:{}}];
+      rooms.forEach(function(room, ri){
+        html += '<div class="room-card">';
+        html += '<div class="room-header"><span>🏠 房间 '+(ri+1)+'</span>';
+        if(rooms.length > 1) html += '<button class="btn btn-danger btn-sm room-del" data-sec="'+sec.id+'" data-ridx="'+ri+'">✕ 删除</button>';
+        html += '</div>';
+        html += '<div class="form-group"><label>房间编号/名称</label><input type="text" data-sec="'+sec.id+'" data-ridx="'+ri+'" data-rfield="name" value="'+esc(room.name)+'" placeholder="如：A栋3层301机房"></div>';
+        sec.roomItems.forEach(function(ri_item){
+          html += renderRoomSubItem(sec, ri_item, ri);
+        });
+        html += '</div>';
+      });
+      html += '<button class="btn btn-sm room-add" data-sec="'+sec.id+'" style="color:var(--pri);background:var(--pri-bg);border:1px dashed var(--pri);margin-top:6px;width:100%;padding:8px">＋ 添加房间</button>';
+    }
+    html += '</div>';
+    div.innerHTML = html;
+    c.appendChild(div);
+  });
+  bindSectionEvents();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function renderSubItem(sec, item){
+  var sd = state.sections[sec.id][item.id];
+  var h = '<div class="sub-item" id="item_'+sec.id+'_'+item.id+'"><div class="sub-item-title">🔹 '+esc(item.label)+'</div>';
+
+  if(item.type==='radio'){
+    h += '<div class="radio-group">';
+    item.options.forEach(function(opt){
+      var chk = sd.value===opt ? ' checked' : '';
+      h += '<label class="radio-label"><input type="radio" name="'+item.id+'" value="'+esc(opt)+'"'+chk+'>'+esc(opt)+'</label>';
+    });
+    h += '</div>';
+    if(!item.noPhoto) h += photoGridHTML(sec.id, item.id, sd.photos, 10);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else if(item.type==='checkbox'){
+    h += '<div class="check-group">';
+    item.options.forEach(function(opt){
+      var chk = sd.values && sd.values.indexOf(opt)>=0 ? ' checked' : '';
+      h += '<label class="check-label"><input type="checkbox" value="'+esc(opt)+'" data-sec="'+sec.id+'" data-item="'+item.id+'"'+chk+'>'+esc(opt)+'</label>';
+    });
+    h += '</div>';
+    if(!item.noPhoto) h += photoGridHTML(sec.id, item.id, sd.photos, 10);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else if(item.type==='number'){
+    h += '<div class="num-row"><div class="form-group"><label>'+(item.unit||'')+'</label>'+
+      '<input type="number" min="0" data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="value" value="'+(sd.value||0)+'"></div></div>';
+    if(item.checks){
+      h += '<div class="check-group" style="margin-top:4px">';
+      item.checks.forEach(function(ch){
+        var ck = sd.checkValues && sd.checkValues.indexOf(ch)>=0 ? ' checked' : '';
+        h += '<label class="check-label"><input type="checkbox" data-sec="'+sec.id+'" data-item="'+item.id+'" data-check="1" value="'+esc(ch)+'"'+ck+'>'+esc(ch)+'</label>';
+      });
+      h += '</div>';
+    }
+    if(!item.noPhoto) h += photoGridHTML(sec.id, item.id, sd.photos, 10);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else if(item.type==='duty'){
+    h += '<div class="num-row">'+
+      '<div class="form-group"><label>人/班</label><input type="number" min="0" data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="perShift" value="'+(sd.perShift||0)+'"></div>'+
+      '<div class="form-group"><label>班倒</label><input type="number" min="0" data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="shifts" value="'+(sd.shifts||0)+'"></div>'+
+      '<div class="form-group"><label>总计人</label><input type="number" min="0" readonly data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="total" value="'+(sd.total||0)+'"></div>'+
+      '</div>';
+    if(!item.noPhoto) h += photoGridHTML(sec.id, item.id, sd.photos, 10);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else if(item.type==='total'){
+    h += '<div class="total-badge">👥 总计人数：<span id="totalStaffNum">'+calcTotalStaff()+'</span> 人</div>';
+  } else if(item.type==='sectionIssues'){
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else if(item.type==='condRadio'){
+    h += '<div class="radio-group">';
+    item.options.forEach(function(opt){
+      var chk = sd.value===opt ? ' checked' : '';
+      h += '<label class="radio-label"><input type="radio" name="'+item.id+'" value="'+esc(opt)+'" data-sec="'+sec.id+'" data-item="'+item.id+'" data-cond="1"'+chk+'>'+esc(opt)+'</label>';
+    });
+    h += '</div>';
+    h += '<div class="cond-input'+(sd.value==='是'?' show':'')+'" data-cond-for="'+item.id+'">'+
+      '<div class="form-group"><label>'+esc(item.condLabel)+'</label>'+
+      '<input type="text" data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="condText" value="'+esc(sd.condText)+'" placeholder="请输入'+esc(item.condLabel)+'"></div></div>';
+    if(!item.noPhoto) h += photoGridHTML(sec.id, item.id, sd.photos, 10);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  } else {
+    if(item.ph) h += '<div class="form-group"><div class="hint">💡 '+esc(item.ph)+'</div><textarea data-sec="'+sec.id+'" data-item="'+item.id+'" data-field="text" rows="3">'+esc(sd.text)+'</textarea></div>';
+    if(item.specialPhotos && sd.specialPhotos){
+      item.specialPhotos.forEach(function(lbl,idx){
+        h += '<div class="form-group"><label>'+esc(lbl)+'</label>';
+        if(sd.specialPhotos[idx]){
+          h += '<div class="photo-grid"><div class="photo-wrap"><img class="photo-thumb" src="'+sd.specialPhotos[idx]+'" data-view="1"><button class="photo-del" data-sec="'+sec.id+'" data-item="'+item.id+'" data-spidx="'+idx+'">✕</button></div></div>';
+        } else {
+          h += '<div class="photo-grid"><label class="photo-add">📷<input type="file" accept="image/*" data-sec="'+sec.id+'" data-item="'+item.id+'" data-spidx="'+idx+'"></label></div>';
+        }
+        h += '</div>';
+      });
+    }
+    var maxPhoto = item.specialPhotos ? 8 : 10;
+    h += photoGridHTML(sec.id, item.id, sd.photos, maxPhoto);
+    h += issuesHTML(sec.id, item.id, sd.issues);
+  }
+
+  h += '</div>';
+  return h;
+   }
+
+  function renderRoomSubItem(sec, item, roomIdx){
+    var rd = state.sections[sec.id].rooms[roomIdx].items[item.id];
+    if(!rd) { rd = {text:'',photos:[],issues:[{text:'',photos:[]}]}; state.sections[sec.id].rooms[roomIdx].items[item.id] = rd; }
+    var h = '<div class="sub-item" id="ritem_'+sec.id+'_'+roomIdx+'_'+item.id+'"><div class="sub-item-title">🔹 '+esc(item.label)+'</div>';
+    if(item.ph) h += '<div class="form-group"><div class="hint">💡 '+esc(item.ph)+'</div><textarea data-sec="'+sec.id+'" data-item="'+item.id+'" data-ridx="'+roomIdx+'" data-field="text" rows="3">'+esc(rd.text)+'</textarea></div>';
+    if(item.specialPhotos && rd.specialPhotos){
+      item.specialPhotos.forEach(function(lbl,idx){
+        h += '<div class="form-group"><label>'+esc(lbl)+'</label>';
+        if(rd.specialPhotos[idx]){
+          h += '<div class="photo-grid"><div class="photo-wrap"><img class="photo-thumb" src="'+rd.specialPhotos[idx]+'" data-view="1"><button class="photo-del" data-sec="'+sec.id+'" data-item="'+item.id+'" data-ridx="'+roomIdx+'" data-spidx="'+idx+'">✕</button></div></div>';
+        } else {
+          h += '<div class="photo-grid"><label class="photo-add">📷<input type="file" accept="image/*" data-sec="'+sec.id+'" data-item="'+item.id+'" data-ridx="'+roomIdx+'" data-spidx="'+idx+'"></label></div>';
+        }
+        h += '</div>';
+      });
+    }
+    var maxPhoto = item.specialPhotos ? 8 : 10;
+    h += photoGridHTML(sec.id, item.id, rd.photos, maxPhoto, roomIdx);
+    h += issuesHTML(sec.id, item.id, rd.issues, roomIdx);
+    h += '</div>';
+    return h;
+  }
+
+  function photoGridHTML(secId, itemId, photos, max, roomIdx){
+  var m = max || 10;
+  var ridxAttr = (roomIdx !== undefined && roomIdx !== null) ? ' data-ridx="'+roomIdx+'"' : '';
+  var h = '<div class="form-group"><label>📷 现场照片 (最多'+m+'张)</label><div class="photo-grid">';
+  if(photos && photos.length){
+    photos.forEach(function(p,i){
+      h += '<div class="photo-wrap"><img class="photo-thumb" src="'+p+'" data-view="1"><button class="photo-del" data-sec="'+secId+'" data-item="'+itemId+'" data-pidx="'+i+'"'+ridxAttr+'>✕</button></div>';
+    });
+  }
+  if(!photos || photos.length < m){
+    h += '<label class="photo-add">📷<input type="file" accept="image/*" data-sec="'+secId+'" data-item="'+itemId+'"'+ridxAttr+'></label>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function issuesHTML(secId, itemId, issues, roomIdx){
+  var ridxAttr = (roomIdx !== undefined && roomIdx !== null) ? ' data-ridx="'+roomIdx+'"' : '';
+  var h = '<div class="form-group"><label>⚠️ 问题记录</label>';
+  (issues||[]).forEach(function(iss,idx){
+    var txt = typeof iss==='object' ? iss.text : iss;
+    var phs = typeof iss==='object' ? (iss.photos||[]) : [];
+    h += '<div class="issue-entry">';
+    h += '<div class="issue-row"><textarea data-sec="'+secId+'" data-item="'+itemId+'" data-field="issues" data-idx="'+idx+'" data-sub="text"'+ridxAttr+' rows="2">'+esc(txt)+'</textarea>';
+    if(issues.length>1) h += '<button class="btn btn-danger btn-sm issue-del" data-sec="'+secId+'" data-item="'+itemId+'" data-idx="'+idx+'"'+ridxAttr+'>✕</button>';
+    h += '</div>';
+    h += '<div class="issue-photos">';
+    phs.forEach(function(p,pi){
+      h += '<div class="photo-wrap"><img class="photo-thumb" src="'+p+'" data-view="1"><button class="photo-del issue-photo-del" data-sec="'+secId+'" data-item="'+itemId+'" data-idx="'+idx+'" data-pidx="'+pi+'"'+ridxAttr+'>✕</button></div>';
+    });
+    if(phs.length<5){
+      h += '<label class="photo-add">📷<input type="file" accept="image/*" data-sec="'+secId+'" data-item="'+itemId+'" data-field="issues" data-idx="'+idx+'" data-sub="photo"'+ridxAttr+'></label>';
+    }
+    h += '</div></div>';
+  });
+  h += '<button class="btn btn-sm issue-add" data-sec="'+secId+'" data-item="'+itemId+'"'+ridxAttr+' style="color:var(--pri);background:var(--pri-bg);border:1px dashed var(--pri);margin-top:4px">＋ 添加问题</button>';
+  h += '</div>';
+  return h;
+}
+
+function renderRisks(){
+  syncRisksFromIssues();
+  var c = document.getElementById('riskList');
+  if(!state.risks || !state.risks.length){
+    c.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>暂无风险记录<br>填写勘察问题记录后将自动汇总</p></div>';
+    return;
+  }
+  var h = '';
+  state.risks.forEach(function(r,i){
+    var bc = r.level==='高'?'var(--danger)':r.level==='中'?'var(--warn)':'var(--success)';
+    h += '<div class="risk-card" style="border-left-color:'+bc+'">';
+    if(r.source) h += '<div class="risk-source">来源：'+esc(r.source)+'</div>';
+    h += '<div class="form-group"><label>风险描述</label><div class="hint">💡 描述具体风险点和问题</div><textarea data-risk="'+i+'" data-rfield="desc" rows="2">'+esc(r.desc)+'</textarea></div>';
+    h += '<div class="form-group"><label>等级</label><div class="radio-group">';
+    ['高','中','低'].forEach(function(lv){
+      var chk = r.level===lv ? ' checked' : '';
+      h += '<label class="radio-label"><input type="radio" name="riskLv'+i+'" value="'+lv+'" data-risk="'+i+'" data-rfield="level"'+chk+'>'+lv+'</label>';
+    });
+    h += '</div></div>';
+    h += '<div class="form-group"><label>影响范围</label><div class="hint">💡 描述风险可能影响的范围和后果</div><textarea data-risk="'+i+'" data-rfield="scope" rows="2">'+esc(r.scope)+'</textarea></div>';
+    h += '<div class="form-group"><label>整改建议</label><div class="hint">💡 提出整改措施和建议</div><textarea data-risk="'+i+'" data-rfield="suggest" rows="2">'+esc(r.suggest)+'</textarea></div>';
+    h += '<div class="risk-actions"><button class="btn btn-danger btn-sm" data-risk-del="'+i+'">🗑️ 删除</button></div>';
+    h += '</div>';
+  });
+  c.innerHTML = h;
+}
+
+function renderConclusion(){
+  document.querySelectorAll('#conclusionRadio input').forEach(function(r){
+    r.checked = r.value===state.conclusion.result;
+  });
+  document.getElementById('conclusionDesc').value = state.conclusion.desc || '';
+}
+
+function syncRisksFromIssues(){
+  var issueMap = {};
+  SECTIONS.forEach(function(sec){
+    sec.items.forEach(function(item){
+      if(item.type==='total') return;
+      var sd = state.sections[sec.id][item.id];
+      var issuesArr = sd.issues || [];
+      if(typeof issuesArr === 'string') issuesArr = [{text:issuesArr,photos:[]}];
+      issuesArr.forEach(function(iss,idx){
+        var txt = typeof iss==='object' ? iss.text : iss;
+        if(txt && txt.trim()){
+          var key = sec.id+'|'+item.id+'|'+idx;
+          issueMap[key] = {
+            source: sec.title.replace(/^3\.\d+\s/,'') + ' - ' + item.label,
+            desc: txt.trim()
+          };
+        }
+      });
+    });
+  });
+  // Also sync from room items
+  SECTIONS.forEach(function(sec){
+    if(!sec.roomItems) return;
+    (state.sections[sec.id].rooms||[]).forEach(function(room, ri){
+      sec.roomItems.forEach(function(ri_item){
+        var rd = room.items && room.items[ri_item.id];
+        if(!rd) return;
+        var issuesArr = rd.issues || [];
+        issuesArr.forEach(function(iss,idx){
+          var txt = typeof iss==='object' ? iss.text : iss;
+          if(txt && txt.trim()){
+            var roomLabel = room.name ? ' - '+room.name : '';
+            var key = sec.id+'|room|'+ri+'|'+ri_item.id+'|'+idx;
+            issueMap[key] = {
+              source: sec.title.replace(/^3\.\d+\s/,'') + roomLabel + ' - ' + ri_item.label,
+              desc: txt.trim()
+            };
+          }
+        });
+      });
+    });
+  });
+  if(!state.risks) state.risks = [];
+  var existing = {};
+  state.risks.forEach(function(r,i){ if(r.sourceKey) existing[r.sourceKey]=i; });
+  Object.keys(issueMap).forEach(function(key){
+    if(!(key in existing)){
+      state.risks.push({sourceKey:key,source:issueMap[key].source,desc:issueMap[key].desc,level:'中',scope:'',suggest:''});
+    } else {
+      var idx = existing[key];
+      state.risks[idx].desc = issueMap[key].desc;
+      state.risks[idx].source = issueMap[key].source;
+    }
+  });
+  var toRemove = [];
+  state.risks.forEach(function(r,i){ if(r.sourceKey && !(r.sourceKey in issueMap)) toRemove.push(i); });
+  for(var j=toRemove.length-1;j>=0;j--) state.risks.splice(toRemove[j],1);
+}
+
+function calcTotalStaff(){
+  var m = state.sections.s_staff.i_manager.value || 0;
+  var e = state.sections.s_staff.i_engineer.value || 0;
+  var d = state.sections.s_staff.i_duty.total || 0;
+  var mt = state.sections.s_staff.i_maint.value || 0;
+  return m + e + d + mt;
+}
+
+function calcDutyTotal(){
+  var d = state.sections.s_staff.i_duty;
+  d.shiftCount = d.shifts;
+  d.total = (d.perShift||0) * (d.shifts||0);
+  return d.total;
+}
+
+function updateProgress(){
+  var total=0, filled=0;
+  if(state.info.name) filled++; total++;
+  if(state.info.date) filled++; total++;
+  if(state.info.address) filled++; total++;
+  if(state.info.prodDate) filled++; total++;
+  SECTIONS.forEach(function(sec){
+    sec.items.forEach(function(item){
+      if(item.type==='total') return;
+      total++;
+      var sd = state.sections[sec.id][item.id];
+      if(item.type==='radio'){if(sd.value) filled++;}
+      else if(item.type==='checkbox'){if(sd.values&&sd.values.length) filled++;}
+      else if(item.type==='number'){if(sd.value) filled++;}
+      else if(item.type==='duty'){if(sd.perShift||sd.shifts) filled++;}
+      else if(item.type==='condRadio'){if(sd.value) filled++;}
+      else {if(sd.text||(sd.issues&&sd.issues.some(function(iss){var t=typeof iss==='object'?iss.text:iss;return t&&t.trim();}))||(sd.photos&&sd.photos.length)) filled++;}
+    });
+  });
+  // Count room items
+  SECTIONS.forEach(function(sec){
+    if(!sec.roomItems) return;
+    (state.sections[sec.id].rooms||[]).forEach(function(room){
+      sec.roomItems.forEach(function(ri_item){
+        total++;
+        var rd = room.items && room.items[ri_item.id];
+        if(!rd) return;
+        if(rd.text||(rd.issues&&rd.issues.some(function(iss){var t=typeof iss==='object'?iss.text:iss;return t&&t.trim();}))||(rd.photos&&rd.photos.length)) filled++;
+      });
+    });
+  });
+  var pct = total ? Math.round(filled/total*100) : 0;
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('completionBadge').textContent = pct+'%';
+}
+
+/* ========== iFlytek Voice ASR Engine ========== */
+var xfAppId = null;
+
+function getVoiceQuota(){
+  var q=localStorage.getItem('xf_quota');
+  if(!q) return {date:'',used:0};
+  try{var d=JSON.parse(q);if(d.date!==new Date().toISOString().slice(0,10)){d.date=new Date().toISOString().slice(0,10);d.used=0;localStorage.setItem('xf_quota',JSON.stringify(d));}return d;}catch(e){return{date:'',used:0};}
+}
+function incVoiceQuota(){
+  var d=getVoiceQuota();d.used++;d.date=new Date().toISOString().slice(0,10);localStorage.setItem('xf_quota',JSON.stringify(d));updateVoiceQuotaDisplay();
+}
+function updateVoiceQuotaDisplay(){
+  var q=getVoiceQuota();var left=500-q.used;
+  document.querySelectorAll('.voice-quota').forEach(function(el){el.textContent='讯飞语音剩余: '+left+'/500次/天';});
+}
+
+async function xfAuthUrl(){
+  try{
+    var dcToken=localStorage.getItem('dc_ops_token')||localStorage.getItem('dc_ops_cloud_token');
+    var resp=await fetch(CLOUD_BACKEND_URL.replace('/backup','/voice/token'),{headers:dcToken?{'Authorization':'Bearer '+dcToken}:{}});
+    var data=await resp.json();
+    if(data.code===0&&data.data&&data.data.mode==='xfyun'&&data.data.url){
+      xfAppId=data.data.appId;
+      return data.data.url;
+    }
+  }catch(e){console.error('voice token fetch error:',e);}
+  return null;
+}
+
+var xfWs=null, xfAudioCtx=null, xfProcessor=null, xfTargetInput=null, xfStream=null, xfCurSent='', xfFixedText='', xfBeforeText='', xfAfterText='', xfInsertPos=0;
+
+function startXFVoice(targetEl){
+  var q=getVoiceQuota();
+  if(q.used>=500){showToast('⚠️ 今日讯飞语音额度已用完(500次)，已切换浏览器语音');startBrowserVoice(targetEl);return;}
+  if(!targetEl){return;}
+  xfTargetInput=targetEl;
+  xfCurSent='';xfFixedText='';
+  var isNum=targetEl.type==='number';
+  if(isNum){
+    xfBeforeText='';xfAfterText='';
+  }else{
+    xfInsertPos=targetEl.selectionStart||targetEl.value.length;
+    xfBeforeText=targetEl.value.substring(0,xfInsertPos);
+    xfAfterText=targetEl.value.substring(targetEl.selectionEnd||xfInsertPos);
+  }
+  navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:true,noiseSuppression:true}}).then(function(stream){
+    xfStream=stream;
+    xfAudioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+    var src=xfAudioCtx.createMediaStreamSource(stream);
+    xfProcessor=xfAudioCtx.createScriptProcessor(4096,1,1);
+    src.connect(xfProcessor);
+    xfProcessor.connect(xfAudioCtx.destination);
+    xfAuthUrl().then(function(wsUrl){
+      if(!wsUrl){showToast('⚠️ 语音服务未配置，已切换浏览器语音');startBrowserVoice(targetEl);stopXFVoice();return;}
+      try{xfWs=new WebSocket(wsUrl);}catch(e){showToast('❌ 语音连接失败');stopXFVoice();return;}
+      xfWs.onopen=function(){
+        var frame={common:{app_id:xfAppId},business:{language:'zh_cn',domain:'iat',accent:'mandarin',vad_eos:8000,dwa:'wpgs'},data:{status:0,format:'audio/L16;rate=16000',encoding:'raw'}};
+      xfWs.send(JSON.stringify(frame));
+      var fab=document.getElementById('fabVoice');
+      if(fab)fab.classList.add('recording');
+      xfTargetInput.classList.add('voice-target');
+      showToast('🎤 录音中...');
+    };
+    xfWs.onmessage=function(e){
+      try{
+        var r=JSON.parse(e.data);
+        if(r.code!==0){showToast('❌ 语音识别错误:'+r.message);stopXFVoice();return;}
+        var data=r.data&&r.data.result;
+        if(data){
+          var ws=data.ws;
+          if(ws){
+            var txt='';
+            ws.forEach(function(w){w.cw.forEach(function(c){txt+=c.w;});});
+            if(data.pgs==='apd'){
+              xfFixedText+=xfCurSent;
+              xfCurSent=txt;
+            }else if(data.pgs==='rpl'){
+              xfCurSent=txt;
+            }else{
+              xfCurSent=txt;
+            }
+            xfTargetInput.value=xfBeforeText+xfFixedText+xfCurSent+xfAfterText;
+            if(xfTargetInput.type==='number'){
+              var num=xfFixedText+xfCurSent;
+              var parsed=parseFloat(num.replace(/[^\d.]/g,''));
+              if(!isNaN(parsed)) xfTargetInput.value=parsed;
+            }
+            xfTargetInput.dispatchEvent(new Event('input',{bubbles:true}));
+          }
+          if(data.status===2) stopXFVoice();
+        }
+      }catch(err){}
+    };
+    xfWs.onerror=function(){showToast('❌ 语音连接中断');stopXFVoice();};
+    xfWs.onclose=function(){};
+    xfProcessor.onaudioprocess=function(e){
+      if(xfWs&&xfWs.readyState===1){
+        var pcm=e.inputBuffer.getChannelData(0);
+        var int16=new Int16Array(pcm.length);
+        for(var i=0;i<pcm.length;i++){var s=Math.max(-1,Math.min(1,pcm[i]));int16[i]=s<0?s*0x8000:s*0x7FFF;}
+        var b64=arrayBufferToBase64(int16.buffer);
+        xfWs.send(JSON.stringify({data:{status:1,format:'audio/L16;rate=16000',encoding:'raw',audio:b64}}));
+      }
+    };
+    });
+  }).catch(function(e){showToast('❌ 无法访问麦克风');});
+}
+
+function stopXFVoice(){
+  if(xfWs&&xfWs.readyState===1){
+    xfWs.send(JSON.stringify({data:{status:2,format:'audio/L16;rate=16000',encoding:'raw',audio:''}}));
+  }
+  if(xfProcessor)xfProcessor.disconnect();
+  if(xfAudioCtx)xfAudioCtx.close();
+  if(xfStream)xfStream.getTracks().forEach(function(t){t.stop();});
+  xfWs=null;xfProcessor=null;xfAudioCtx=null;xfStream=null;
+  var fab=document.getElementById('fabVoice');
+  if(fab)fab.classList.remove('recording');
+  if(xfTargetInput)xfTargetInput.classList.remove('voice-target');
+  incVoiceQuota();
+  showToast('✅ 录音结束');
+}
+
+function arrayBufferToBase64(buf){
+  var bin='';
+  var bytes=new Uint8Array(buf);
+  for(var i=0;i<bytes.byteLength;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+// Fallback: browser built-in speech
+function startBrowserVoice(targetEl){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('❌ 当前浏览器不支持语音输入');return;}
+  var rec=new SR();
+  rec.lang='zh-CN';rec.continuous=false;rec.interimResults=false;
+  var pos=targetEl.selectionStart||targetEl.value.length;
+  var before=targetEl.value.substring(0,pos);
+  var after=targetEl.value.substring(targetEl.selectionEnd||pos);
+  rec.onresult=function(e){
+    var t=e.results[0][0].transcript;
+    if(targetEl){targetEl.value=before+t+after;targetEl.dispatchEvent(new Event('input',{bubbles:true}));}
+  };
+  rec.onerror=function(){showToast('❌ 语音识别出错');};
+  rec.onend=function(){};
+  rec.start();
+  showToast('🎤 浏览器语音录音中...');
+}
+
+// Track last focused input for voice target
+var xfLastFocused=null;
+document.addEventListener('focusin',function(e){
+  if(e.target&&(e.target.tagName==='INPUT'&&(e.target.type==='text'||e.target.type==='number')||e.target.tagName==='TEXTAREA')){
+    if(!e.target.readOnly&&e.target.id!=='titleInput') xfLastFocused=e.target;
+  }
+});
+
+function toggleFabVoice(){
+  if(document.getElementById('fabVoice').classList.contains('recording')){stopXFVoice();}
+  else{
+    var target=xfLastFocused;
+    if(!target){showToast('请先点击要输入的文本框');return;}
+    startXFVoice(target);
+  }
+}
+
+/* ========== FAB Voice Button ========== */
+// Use touchend+preventDefault to prevent keyboard dismiss on tap
+var fabEl=document.getElementById('fabVoice');
+fabEl.addEventListener('touchend',function(e){
+  e.preventDefault();
+  toggleFabVoice();
+},{passive:false});
+fabEl.addEventListener('click',function(){
+  if(!('ontouchstart' in window))toggleFabVoice();
+});
+
+// FAB keyboard avoidance via visualViewport
+function adjustFabPosition(){
+  var fab=document.getElementById('fabVoice');
+  if(!fab)return;
+  if(fab.classList.contains('recording'))return;
+  if(window.visualViewport){
+    var vv=window.visualViewport;
+    var kbH=window.innerHeight-vv.height;
+    if(kbH>60){
+      // Keyboard visible: position relative to visual viewport top
+      fab.style.top=(vv.offsetTop+vv.height-60)+'px';
+      fab.style.bottom='auto';
+    }else{
+      // No keyboard: use bottom
+      fab.style.top='';
+      fab.style.bottom='80px';
+    }
+  }else{
+    fab.style.top='';
+    fab.style.bottom='80px';
+  }
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',adjustFabPosition);
+  window.visualViewport.addEventListener('scroll',adjustFabPosition);
+}
+// Initial position
+adjustFabPosition();
+
+// Update FAB quota badge
+function updateVoiceQuotaDisplay(){
+  var q=getVoiceQuota();var left=500-q.used;
+  var badge=document.getElementById('fabQuota');
+  if(badge) badge.textContent=left;
+  // Also update FAB style when low
+  var fab=document.getElementById('fabVoice');
+  if(fab){
+    if(left<=0) fab.style.opacity='0.5';
+    else if(left<=50) fab.style.background='linear-gradient(135deg,#F59E0B,#D97706)';
+    else fab.style.opacity='';
+  }
+}
+
+function checkUnfilled(){
+  var items=[];
+  var infoFields=[
+    {label:'机房名称',key:'name'},{label:'考察日期',key:'date'},{label:'地址',key:'address'},
+    {label:'投产时间',key:'prodDate'},{label:'手续(总能耗指标)',key:'procedure'},
+    {label:'建筑情况',key:'building'},{label:'规模概况',key:'scale'},
+    {label:'机电概况',key:'mechElec'},{label:'我方技术需求',key:'demand'},
+    {label:'认证',key:'cqcCert'},{label:'运维人员概括',key:'staffSummary'}
+  ];
+  infoFields.forEach(function(f){
+    if(!state.info[f.key]) items.push({section:'机房信息',label:f.label,scrollTo:'f_'+f.key});
+  });
+  SECTIONS.forEach(function(sec){
+    var secState=state.sections[sec.id];
+    if(!secState) return;
+    sec.items.forEach(function(item){
+      if(item.type==='total'||item.type==='sectionIssues') return;
+      if(item.label.indexOf('考察项记录')>=0) return;
+      var sd=secState[item.id];
+      if(!sd) return;
+      var filled=false;
+      if(item.type==='radio'||item.type==='condRadio'){filled=!!sd.value;}
+      else if(item.type==='checkbox'){filled=sd.values&&sd.values.length>0;}
+      else if(item.type==='number'){filled=!!sd.value;}
+      else if(item.type==='duty'){filled=sd.perShift||sd.shifts;}
+      else if(item.type==='sectionIssues'){filled=sd.issues&&sd.issues.some(function(iss){var t=typeof iss==='object'?iss.text:iss;return t&&t.trim();});}
+      else{filled=sd.text||(sd.issues&&sd.issues.some(function(iss){var t=typeof iss==='object'?iss.text:iss;return t&&t.trim();}))||(sd.photos&&sd.photos.length);}
+      if(!filled) items.push({section:sec.title.replace(/^3\.\d+\s/,''),label:item.label,scrollTo:'item_'+sec.id+'_'+item.id});
+    });
+    if(sec.roomItems){
+      var rooms=secState.rooms||[];
+      rooms.forEach(function(room,ri){
+        if(!room) return;
+        sec.roomItems.forEach(function(ri_item){
+          var rd=room.items&&room.items[ri_item.id];
+          var filled=false;
+          if(rd) filled=rd.text||(rd.issues&&rd.issues.some(function(iss){var t=typeof iss==='object'?iss.text:iss;return t&&t.trim();}))||(rd.photos&&rd.photos.length);
+          var rmLabel=room.name?('['+room.name+'] '):('[房间'+(ri+1)+'] ');
+          if(!filled) items.push({section:sec.title.replace(/^3\.\d+\s/,''),label:rmLabel+ri_item.label,scrollTo:'ritem_'+sec.id+'_'+ri+'_'+ri_item.id});
+        });
+      });
+    }
+  });
+  return items;
+}
+
+function showCheckResult(){
+  try{
+  var items=checkUnfilled();
+  var c=document.getElementById('checkResult');
+  if(!items.length){
+    c.innerHTML='<div style="text-align:center;padding:20px;color:#22C55E;font-size:15px">✅ 所有项目均已填写！</div>';
+  }else{
+    var h='<div style="margin-bottom:8px;color:#64748B">共 <b style="color:#EF4444">'+items.length+'</b> 项未填写，点击可跳转：</div>';
+    var lastSec='';
+    items.forEach(function(it,i){
+      if(it.section!==lastSec){
+        h+='<div style="margin-top:10px;font-weight:600;color:#F97316;font-size:13px">'+esc(it.section)+'</div>';
+        lastSec=it.section;
+      }
+      h+='<div class="check-item" data-scroll="'+it.scrollTo+'" style="padding:8px;border-radius:6px;cursor:pointer;transition:background .15s;font-size:14px;color:#1E293B;border-bottom:1px solid #F1F5F9;min-height:36px">▸ '+esc(it.label)+'</div>';
+    });
+    c.innerHTML=h;
+    c.querySelectorAll('.check-item').forEach(function(el){
+      var touchStartY=0,moved=false;
+      el.addEventListener('touchstart',function(e){touchStartY=e.touches[0].clientY;moved=false;},{passive:true});
+      el.addEventListener('touchmove',function(){moved=true;},{passive:true});
+      function doJump(key){
+        document.getElementById('checkModal').style.display='none';
+        var isInfoField=key.indexOf('f_')===0;
+        // Switch to tabRecord tab
+        var navBtn=document.querySelector('.nav-item[data-tab="tabRecord"]');
+        if(navBtn){
+          document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
+          navBtn.classList.add('active');
+          document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+          document.getElementById('tabRecord').classList.add('active');
+        }
+        // Open section immediately (no animation)
+        var secId=key.replace(/^(item_|ritem_)/,'').replace(/_.+$/,'');
+        var secBody=document.querySelector('[data-sec-body="'+secId+'"]');
+        var secHeader=document.querySelector('[data-sec="'+secId+'"]');
+        if(secBody&&!secBody.classList.contains('open')){
+          if(secHeader)secHeader.classList.add('open');
+          secBody.style.transition='none';
+          secBody.classList.add('open');
+          // Force reflow
+          void secBody.offsetHeight;
+          secBody.style.transition='';
+        }
+        // For info fields, scroll to the top of info card
+        if(isInfoField){
+          var target=document.getElementById(key);
+          if(target){
+            // Scroll info section to top first, then find element
+            window.scrollTo(0,0);
+            setTimeout(function(){
+              var top=0,el=target;
+              while(el&&el!==document.body){top+=el.offsetTop;el=el.offsetParent;}
+              window.scrollTo(0,Math.max(0,top-window.innerHeight/3));
+              if(target.focus)target.focus();
+              target.style.background='#FEF3C7';
+              setTimeout(function(){target.style.background='';},2500);
+            },100);
+          }
+          return;
+        }
+        // For section items, wait for layout then scroll
+        function tryScroll(retries){
+          var target=document.getElementById(key);
+          if(!target&&retries>0){setTimeout(function(){tryScroll(retries-1);},200);return;}
+          if(!target)return;
+          // Force reflow before calculating position
+          void document.body.offsetHeight;
+          var top=0,el=target;
+          while(el&&el!==document.body){top+=el.offsetTop;el=el.offsetParent;}
+          window.scrollTo(0,Math.max(0,top-window.innerHeight/3));
+          if(target.focus)target.focus();
+          target.style.background='#FEF3C7';
+          setTimeout(function(){target.style.background='';},2500);
+        }
+        setTimeout(function(){tryScroll(5);},300);
+      }
+      el.addEventListener('click',function(){doJump(el.getAttribute('data-scroll'));});
+      el.addEventListener('touchend',function(e){e.preventDefault();if(!moved)doJump(el.getAttribute('data-scroll'));});
+      el.addEventListener('mouseenter',function(){this.style.background='#FFF7ED';});
+      el.addEventListener('mouseleave',function(){this.style.background='';});
+    });
+  }
+  document.getElementById('checkModal').style.display='flex';
+  }catch(err){showToast('❌ 检查出错: '+err.message);}
+}
+
+function bindInfoSectionToggle(){
+  var hd=document.querySelector('.section-header[data-sec="info"]');
+  if(hd&&!hd._bound){
+    hd.addEventListener('click',function(){
+      this.classList.toggle('open');
+      var body=document.querySelector('[data-sec-body="info"]');
+      if(body) body.classList.toggle('open');
+    });
+    hd._bound=true;
+  }
+}
+
+function bindSectionEvents(){
+  document.querySelectorAll('.section-header:not([data-sec="info"])').forEach(function(hd){
+    hd.addEventListener('click', function(){
+      var secId = this.getAttribute('data-sec');
+      var sec = SECTIONS.find(function(s){return s.id===secId;});
+      if(sec) sec._open = !sec._open;
+      this.classList.toggle('open');
+      var body = document.querySelector('[data-sec-body="'+secId+'"]');
+      if(body) body.classList.toggle('open');
+    });
+  });
+
+  document.querySelectorAll('[data-field="text"]:not([data-ridx])').forEach(function(el){
+    el.addEventListener('input', function(){
+      state.sections[this.getAttribute('data-sec')][this.getAttribute('data-item')].text = this.value;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-field="issues"][data-sub="text"]:not([data-ridx])').forEach(function(el){
+    el.addEventListener('input', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), idx=Number(this.getAttribute('data-idx'));
+      if(!state.sections[secId][itemId].issues) state.sections[secId][itemId].issues=[];
+      if(!state.sections[secId][itemId].issues[idx]) state.sections[secId][itemId].issues[idx]={text:'',photos:[]};
+      state.sections[secId][itemId].issues[idx].text = this.value;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('.issue-add:not([data-ridx])').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item');
+      if(!state.sections[secId][itemId].issues) state.sections[secId][itemId].issues=[];
+      state.sections[secId][itemId].issues.push({text:'',photos:[]});
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('.issue-del:not([data-ridx])').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), idx=Number(this.getAttribute('data-idx'));
+      state.sections[secId][itemId].issues.splice(idx,1);
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('[data-field="value"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      state.sections[this.getAttribute('data-sec')][this.getAttribute('data-item')].value = Number(this.value)||0;
+      recalcStaff(); saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-field="perShift"],[data-field="shifts"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), fld=this.getAttribute('data-field');
+      state.sections[secId][itemId][fld] = Number(this.value)||0;
+      calcDutyTotal();
+      var totalEl = document.querySelector('[data-sec="'+secId+'"][data-item="'+itemId+'"][data-field="total"]');
+      if(totalEl) totalEl.value = state.sections[secId][itemId].total;
+      recalcStaff(); saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-field="condText"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      state.sections[this.getAttribute('data-sec')][this.getAttribute('data-item')].condText = this.value;
+      saveState();
+    });
+  });
+
+  document.querySelectorAll('.sub-item input[type=radio]:not([data-rfield]):not([data-cond])').forEach(function(el){
+    el.addEventListener('change', function(){
+      var name = this.name;
+      var sec, item;
+      SECTIONS.forEach(function(s){s.items.forEach(function(it){if(it.id===name){sec=s;item=it;}});});
+      if(sec && item){
+        state.sections[sec.id][item.id].value = this.value;
+        saveState(); updateProgress();
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-cond="1"]').forEach(function(el){
+    el.addEventListener('change', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item');
+      state.sections[secId][itemId].value = this.value;
+      var cw = document.querySelector('[data-cond-for="'+itemId+'"]');
+      if(cw){ if(this.value==='是') cw.classList.add('show'); else cw.classList.remove('show'); }
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('.sub-item input[type=checkbox]:not([data-check="1"])').forEach(function(el){
+    el.addEventListener('change', function(){
+      var secId=this.getAttribute('data-sec');
+      var itemId=this.getAttribute('data-item');
+      if(!secId||!itemId)return;
+      var vals=[];
+      this.closest('.check-group').querySelectorAll('input[type=checkbox]').forEach(function(b){if(b.checked) vals.push(b.value);});
+      state.sections[secId][itemId].values = vals;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-check="1"]').forEach(function(el){
+    el.addEventListener('change', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item');
+      var vals = [];
+      document.querySelectorAll('[data-sec="'+secId+'"][data-item="'+itemId+'"][data-check="1"]').forEach(function(b){if(b.checked) vals.push(b.value);});
+      state.sections[secId][itemId].checkValues = vals;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-view="1"]').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.getElementById('viewerImg').src = this.src;
+      document.getElementById('photoViewer').classList.add('show');
+    });
+  });
+
+  document.querySelectorAll('.room-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec');
+      if(!state.sections[secId].rooms) state.sections[secId].rooms=[];
+      var newRoom = {name:'', items:{}};
+      var sec = SECTIONS.find(function(s){return s.id===secId;});
+      if(sec && sec.roomItems){
+        sec.roomItems.forEach(function(ri){
+          var rd = {text:'',photos:[],issues:[{text:'',photos:[]}]};
+          if(ri.specialPhotos) rd.specialPhotos = ri.specialPhotos.map(function(){return '';});
+          newRoom.items[ri.id] = rd;
+        });
+      }
+      state.sections[secId].rooms.push(newRoom);
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('.room-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), ridx=Number(this.getAttribute('data-ridx'));
+      state.sections[secId].rooms.splice(ridx,1);
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('[data-rfield="name"]').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var secId=this.getAttribute('data-sec'), ridx=Number(this.getAttribute('data-ridx'));
+      state.sections[secId].rooms[ridx].name = this.value;
+      saveState();
+    });
+  });
+
+  document.querySelectorAll('[data-ridx][data-field="text"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), ridx=Number(this.getAttribute('data-ridx'));
+      state.sections[secId].rooms[ridx].items[itemId].text = this.value;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-ridx][data-sub="text"]').forEach(function(el){
+    el.addEventListener('input', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), ridx=Number(this.getAttribute('data-ridx')), idx=Number(this.getAttribute('data-idx'));
+      if(!state.sections[secId].rooms[ridx].items[itemId]) return;
+      if(!state.sections[secId].rooms[ridx].items[itemId].issues) state.sections[secId].rooms[ridx].items[itemId].issues=[];
+      if(!state.sections[secId].rooms[ridx].items[itemId].issues[idx]) state.sections[secId].rooms[ridx].items[itemId].issues[idx]={text:'',photos:[]};
+      state.sections[secId].rooms[ridx].items[itemId].issues[idx].text = this.value;
+      saveState(); updateProgress();
+    });
+  });
+
+  document.querySelectorAll('[data-ridx].issue-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), ridx=Number(this.getAttribute('data-ridx'));
+      if(!state.sections[secId].rooms[ridx].items[itemId]) return;
+      if(!state.sections[secId].rooms[ridx].items[itemId].issues) state.sections[secId].rooms[ridx].items[itemId].issues=[];
+      state.sections[secId].rooms[ridx].items[itemId].issues.push({text:'',photos:[]});
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('.issue-del[data-ridx]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), idx=Number(this.getAttribute('data-idx')), ridx=Number(this.getAttribute('data-ridx'));
+      if(!state.sections[secId].rooms[ridx].items[itemId]) return;
+      state.sections[secId].rooms[ridx].items[itemId].issues.splice(idx,1);
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('.issue-photo-del').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), idx=Number(this.getAttribute('data-idx')), pidx=Number(this.getAttribute('data-pidx'));
+      var ridx=this.getAttribute('data-ridx');
+      if(ridx !== null && ridx !== undefined){
+        var ri=Number(ridx);
+        if(state.sections[secId].rooms[ri].items[itemId]&&state.sections[secId].rooms[ri].items[itemId].issues[idx]&&state.sections[secId].rooms[ri].items[itemId].issues[idx].photos){
+          state.sections[secId].rooms[ri].items[itemId].issues[idx].photos.splice(pidx,1);
+          saveState(); renderSections();
+        }
+      } else {
+        if(state.sections[secId][itemId].issues[idx]&&state.sections[secId][itemId].issues[idx].photos){
+          state.sections[secId][itemId].issues[idx].photos.splice(pidx,1);
+          saveState(); renderSections();
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-sub="photo"]').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item'), idx=Number(this.getAttribute('data-idx'));
+      var ridx=this.getAttribute('data-ridx');
+      var file=this.files[0]; if(!file)return;
+      this.value='';
+      compressPhoto(file,function(b64){
+        if(ridx !== null && ridx !== undefined){
+          var ri=Number(ridx);
+          if(!state.sections[secId].rooms[ri].items[itemId]) return;
+          if(!state.sections[secId].rooms[ri].items[itemId].issues[idx]) state.sections[secId].rooms[ri].items[itemId].issues[idx]={text:'',photos:[]};
+          if(!state.sections[secId].rooms[ri].items[itemId].issues[idx].photos) state.sections[secId].rooms[ri].items[itemId].issues[idx].photos=[];
+          state.sections[secId].rooms[ri].items[itemId].issues[idx].photos.push(b64);
+          var secObj=SECTIONS.find(function(s){return s.id===secId;});
+          var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+          var itObj=secObj?secObj.roomItems.find(function(it){return it.id===itemId;}):null;
+          var itLbl=itObj?itObj.label:'';
+          var rmLbl=state.sections[secId].rooms[ri].name||'';
+          cloudAutoUpload(b64,'sections.'+secId+'.rooms.'+ri+'.items.'+itemId+'.issues.'+idx+'.photos.'+(state.sections[secId].rooms[ri].items[itemId].issues[idx].photos.length-1));
+        } else {
+          if(!state.sections[secId][itemId].issues[idx]) state.sections[secId][itemId].issues[idx]={text:'',photos:[]};
+          if(!state.sections[secId][itemId].issues[idx].photos) state.sections[secId][itemId].issues[idx].photos=[];
+          state.sections[secId][itemId].issues[idx].photos.push(b64);
+          var secObj=SECTIONS.find(function(s){return s.id===secId;});
+          var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+          var itObj=secObj?secObj.items.find(function(it){return it.id===itemId;}):null;
+          var itLbl=itObj?itObj.label:'';
+          cloudAutoUpload(b64,'sections.'+secId+'.'+itemId+'.issues.'+idx+'.photos.'+(state.sections[secId][itemId].issues[idx].photos.length-1));
+        }
+        saveState(); renderSections();
+      });
+    });
+  });
+
+  document.querySelectorAll('.photo-del:not(.info-photo-del):not(.issue-photo-del)').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var secId=this.getAttribute('data-sec'), itemId=this.getAttribute('data-item');
+      if(!secId||!itemId) return;
+      var pidx=this.getAttribute('data-pidx'), spidx=this.getAttribute('data-spidx');
+      var ridx=this.getAttribute('data-ridx');
+      if(ridx !== null && ridx !== undefined){
+        var ri = Number(ridx);
+        if(spidx !== null && spidx !== undefined){
+          state.sections[secId].rooms[ri].items[itemId].specialPhotos[Number(spidx)] = '';
+        } else {
+          state.sections[secId].rooms[ri].items[itemId].photos.splice(Number(pidx),1);
+        }
+      } else {
+        if(spidx !== null && spidx !== undefined){
+          state.sections[secId][itemId].specialPhotos[Number(spidx)] = '';
+        } else {
+          state.sections[secId][itemId].photos.splice(Number(pidx),1);
+        }
+      }
+      saveState(); renderSections();
+    });
+  });
+
+  document.querySelectorAll('.photo-add input[type=file]:not(#infoPhotoInput)').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var lbl = this.closest('.photo-add');
+      var secId = lbl.getAttribute('data-sec') || this.getAttribute('data-sec');
+      var itemId = lbl.getAttribute('data-item') || this.getAttribute('data-item');
+      if(!secId||!itemId) return;
+      var spidx = lbl.getAttribute('data-spidx');
+      if(spidx === null || spidx === undefined) spidx = this.getAttribute('data-spidx');
+      var ridx = this.getAttribute('data-ridx');
+      var file = this.files[0];
+      if(!file) return;
+      this.value='';
+      compressPhoto(file, function(base64){
+        if(ridx !== null && ridx !== undefined){
+          var ri = Number(ridx);
+          if(spidx !== null && spidx !== undefined){
+            state.sections[secId].rooms[ri].items[itemId].specialPhotos[Number(spidx)] = base64;
+            var secObj=SECTIONS.find(function(s){return s.id===secId;});
+            var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+            var itObj=secObj?secObj.roomItems.find(function(it){return it.id===itemId;}):null;
+            var itLbl=itObj?itObj.label:'';
+            var rmLbl=state.sections[secId].rooms[ri].name||'';
+            var spLbl=itObj&&itObj.specialPhotos?itObj.specialPhotos[Number(spidx)]||'特殊照片':'特殊照片';
+            cloudAutoUpload(base64,'sections.'+secId+'.rooms.'+ri+'.items.'+itemId+'.specialPhotos.'+Number(spidx));
+          } else {
+            if(!state.sections[secId].rooms[ri].items[itemId].photos) state.sections[secId].rooms[ri].items[itemId].photos = [];
+            state.sections[secId].rooms[ri].items[itemId].photos.push(base64);
+            var secObj=SECTIONS.find(function(s){return s.id===secId;});
+            var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+            var itObj=secObj?secObj.roomItems.find(function(it){return it.id===itemId;}):null;
+            var itLbl=itObj?itObj.label:'';
+            var rmLbl=state.sections[secId].rooms[ri].name||'';
+            cloudAutoUpload(base64,'sections.'+secId+'.rooms.'+ri+'.items.'+itemId+'.photos.'+(state.sections[secId].rooms[ri].items[itemId].photos.length-1));
+          }
+        } else {
+          if(spidx !== null && spidx !== undefined){
+            state.sections[secId][itemId].specialPhotos[Number(spidx)] = base64;
+            var secObj=SECTIONS.find(function(s){return s.id===secId;});
+            var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+            var itObj=secObj?secObj.items.find(function(it){return it.id===itemId;}):null;
+            var itLbl=itObj?itObj.label:'';
+            var spLbl=itObj&&itObj.specialPhotos?itObj.specialPhotos[Number(spidx)]||'特殊照片':'特殊照片';
+            cloudAutoUpload(base64,'sections.'+secId+'.'+itemId+'.specialPhotos.'+Number(spidx));
+          } else {
+            if(!state.sections[secId][itemId].photos) state.sections[secId][itemId].photos = [];
+            state.sections[secId][itemId].photos.push(base64);
+            var secObj=SECTIONS.find(function(s){return s.id===secId;});
+            var secLbl=secObj?secObj.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim():'';
+            var itObj=secObj?secObj.items.find(function(it){return it.id===itemId;}):null;
+            var itLbl=itObj?itObj.label:'';
+            cloudAutoUpload(base64,'sections.'+secId+'.'+itemId+'.photos.'+(state.sections[secId][itemId].photos.length-1));
+          }
+        }
+        saveState(); renderSections();
+      });
+    });
+  });
+}
+
+function recalcStaff(){
+  var total = calcTotalStaff();
+  var el = document.getElementById('totalStaffNum');
+  if(el) el.textContent = total;
+  state.sections.s_staff.i_totalStaff.value = total;
+}
+
+function recalcCabinetSummary(){
+  var rows=state.info.cabinetRows||[];
+  var indepCab=0,convertA=0,nonIndepCab=0,nonIndepA=0;
+  rows.forEach(function(r){
+    var cnt=Number(r.cabinetCount)||0;
+    var cA=Number(r.convertA)||0;
+    if(r.isIndepModule==='是'){
+      indepCab+=cnt; convertA+=cA;
+    } else {
+      nonIndepCab+=cnt; nonIndepA+=cA;
+    }
+  });
+  state.info.cabinetSummary.indepCabinets=indepCab;
+  state.info.cabinetSummary.convertA=convertA;
+  state.info.cabinetSummary.nonIndepCabinets=nonIndepCab;
+  state.info.cabinetSummary.nonIndepA=nonIndepA;
+  // Update info section inputs if visible
+  var icEl=document.getElementById('f_indepCabinets');
+  if(icEl) icEl.value=indepCab;
+  var cAEl=document.getElementById('f_convertA');
+  if(cAEl) cAEl.value=convertA;
+  var ncEl=document.getElementById('f_nonIndepCabinets');
+  if(ncEl) ncEl.value=nonIndepCab;
+  var nAEl=document.getElementById('f_nonIndepA');
+  if(nAEl) nAEl.value=nonIndepA;
+}
+
+function compressPhoto(file, cb){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var maxW = 1600;
+      var w = img.width, h = img.height;
+      if(w > maxW){ h = Math.round(h*maxW/w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      cb(canvas.toDataURL('image/jpeg',0.9));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function dataURLtoBlob(dataurl){
+  var parts=dataurl.split(','),mime=parts[0].match(/:(.*?);/)[1],
+      bstr=atob(parts[1]),n=bstr.length,u8=new Uint8Array(n);
+  while(n--) u8[n]=bstr.charCodeAt(n);
+  return new Blob([u8],{type:mime});
+ }
+ window.dataURLtoBlob=dataURLtoBlob;
+
+// KS3 cloud backup via DC Ops Platform
+var CLOUD_APP_TYPE = 'site';
+var CLOUD_APP_LABEL = '选址勘察';
+var CLOUD_BACKEND_URL = '/dc-ops-platform/api/backup';
+
+function showCloudToast(msg,dur){
+  var t=document.getElementById('cloudToast');if(!t)return;
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(function(){t.classList.remove('show');},dur||4000);
+}
+window.showCloudToast=showCloudToast;
+
+function showToast(msg,dur){showCloudToast(msg,dur);}
+window.showToast=showToast;
+
+function showConfirm(title,msg,onConfirm){showModal(title,msg,onConfirm);}
+window.showConfirm=showConfirm;
+
+function renderAll(){migrateIssues(state);saveState();render();}
+window.renderAll=renderAll;
+
+function cloudUpdateStatus(){
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  var user=null;
+  try{user=JSON.parse(localStorage.getItem('dc_ops_cloud_user')||'null');}catch(e){}
+  var el=document.getElementById('cloudStatus');
+  var logoutBtn=document.getElementById('cloudLogoutBtn');
+  var loginBtn=document.getElementById('cloudLoginBtn');
+  if(!el)return;
+  if(token&&user){
+    el.textContent='✅ 已登录: '+user.display_name;
+    if(logoutBtn)logoutBtn.style.display='inline-block';
+    if(loginBtn)loginBtn.textContent='登录';
+  }else{
+    el.textContent='❌ 未登录云备份';
+    if(logoutBtn)logoutBtn.style.display='none';
+    if(loginBtn)loginBtn.textContent='登录';
+  }
+}
+window.cloudUpdateStatus=cloudUpdateStatus;
+
+function openCloudLogin(){
+  document.getElementById('cloudLoginModal').classList.add('show');
+  cloudUpdateStatus();
+}window.openCloudLogin=openCloudLogin;
+
+async function cloudLogin(){
+  var username=document.getElementById('cloudUsername').value.trim();
+  var password=document.getElementById('cloudPassword').value.trim();
+  if(!username||!password){showCloudToast('❌ 请输入用户名和密码');return;}
+  showCloudToast('🔐 登录中...');
+  try{
+    var resp=await fetch('/dc-ops-platform/api/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:username,password:password})
+    });
+    var data=await resp.json();
+    if(data.code===0&&data.data&&data.data.token){
+      localStorage.setItem('dc_ops_cloud_token',data.data.token);
+      localStorage.setItem('dc_ops_cloud_user',JSON.stringify(data.data.user||{display_name:username}));
+      cloudUpdateStatus();
+      showCloudToast('✅ 登录成功: '+(data.data.user?data.data.user.display_name:username));
+      document.getElementById('cloudLoginModal').classList.remove('show');
+    }else{
+      showCloudToast('❌ '+((data&&data.message)||'登录失败'));
+    }
+  }catch(e){showCloudToast('❌ 网络错误:'+e.message);}
+}
+window.cloudLogin=cloudLogin;
+
+function cloudLogout(){
+  localStorage.removeItem('dc_ops_cloud_token');
+  localStorage.removeItem('dc_ops_cloud_user');
+  cloudUpdateStatus();
+  showCloudToast('✅ 已退出云备份登录');
+}
+window.cloudLogout=cloudLogout;
+
+async function uploadToKS3(blob,fileName,contentType,folderId){
+ var token=localStorage.getItem('dc_ops_cloud_token');
+ if(!token){showCloudToast('❌ 请先登录云备份');return null;}
+ try{
+   var b64=await new Promise(function(resolve){
+     var reader=new FileReader();
+     reader.onloadend=function(){resolve(reader.result.split(',')[1]);};
+     reader.readAsDataURL(blob);
+   });
+   var bodyObj={appType:CLOUD_APP_TYPE,fileName:fileName,contentType:contentType||blob.type||'application/octet-stream',data:b64};
+   if(folderId)bodyObj.folder=folderId;
+   var resp=await fetch(CLOUD_BACKEND_URL+'/upload',{
+     method:'POST',
+     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+     body:JSON.stringify(bodyObj)
+   });
+   var data=await resp.json();
+   if(data.code!==0){showCloudToast('❌ '+data.message);return null;}
+   return data.data;
+ }catch(e){showCloudToast('❌ 上传异常:'+e.message);return null;}
+ }
+ window.uploadToKS3=uploadToKS3;
+
+ async function cloudAutoUpload(b64,photoKey){
+  if(localStorage.getItem('cloud_auto_upload')!=='true')return;
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  if(!token)return;
+  try{
+    var blob=dataURLtoBlob(b64);
+    showCloudToast('☁️ 上传中...');
+    var result=await uploadToKS3(blob,photoKey+'.jpg','image/jpeg');
+    if(result)showCloudToast('✅ 已备份到云端');
+  }catch(e){showCloudToast('❌ 备份异常:'+e.message);}
+  }
+  window.cloudAutoUpload=cloudAutoUpload;
+
+  async function cloudBackup(){
+  try {
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  var label=prompt('请输入备份名称（如：酒仙桥M8-选址初勘）：','');
+  if(label===null)return;
+  label=label.trim();
+  showCloudToast('☁️ 正在备份数据...');
+  try{
+    var backupData={info:state.info,sections:state.sections,risks:state.risks,conclusion:state.conclusion,cabinetSummary:state.cabinetSummary,demandCompare:state.demandCompare,photos:{},_meta:{appType:CLOUD_APP_TYPE,version:'38',timestamp:Date.now(),dcName:state.info.name||'未命名'}};
+    var allPhotos=collectAllPhotosForCloud();
+    Object.keys(allPhotos).forEach(function(k){
+      backupData.photos[k]=allPhotos[k].length;
+    });
+    var jsonStr=JSON.stringify(backupData);
+    var d=new Date();
+    var ds=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2)+('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2);
+    var baseName=state.info.name||'未命名';
+    var nameParts=baseName+'_'+ds;
+    if(label)nameParts=nameParts+'_'+label;
+    var fileName=encodeURIComponent(nameParts)+'.json';    var jsonBlob=new Blob([jsonStr],{type:'application/json'});
+    var mainResult=await uploadToKS3(jsonBlob,fileName,'application/json');
+    if(!mainResult){return;}
+    var folderId=mainResult.folderId;
+    var photoCount=0;
+    var photoKeys=Object.keys(allPhotos);
+    for(var ki=0;ki<photoKeys.length;ki++){
+      var pid=photoKeys[ki];
+      var phs=allPhotos[pid]||[];
+      for(var pi=0;pi<phs.length;pi++){
+        if(phs[pi]&&phs[pi].indexOf('data:image')===0){
+          var pBlob=dataURLtoBlob(phs[pi]);
+          var pKey='photos/'+pid+'_'+pi+'.jpg';
+          await uploadToKS3(pBlob,pKey,'image/jpeg',folderId);
+          photoCount++;
+          if(photoCount%5===0)showCloudToast('☁️ 上传照片 '+photoCount+'...');
+        }
+      }
+    }
+    showCloudToast('✅ 备份完成! 数据+照片('+photoCount+'张)');
+    }catch(e){alert('备份内层错误: '+e.message+'\n'+e.stack);showCloudToast('❌ 备份失败:'+e.message);}
+  } catch(outerErr) { alert('备份外层错误: '+outerErr.message+'\n'+outerErr.stack); }
+  }
+  window.cloudBackup=cloudBackup;
+
+    function collectAllPhotosForCloud(){  var all={};
+  if(state.info&&state.info.photos) all['info.photos']=state.info.photos;
+  if(state.sections){
+    Object.keys(state.sections).forEach(function(secId){
+      var sec=state.sections[secId];
+      if(sec.rooms){
+        sec.rooms.forEach(function(room,ri){
+          if(room.items){
+            Object.keys(room.items).forEach(function(itemId){
+              var item=room.items[itemId];
+              var key='sections.'+secId+'.rooms.'+ri+'.items.'+itemId;
+              if(item.photos) all[key+'.photos']=item.photos;
+              if(item.issues) item.issues.forEach(function(iss,idx){
+                if(iss.photos) all[key+'.issues.'+idx+'.photos']=iss.photos;
+              });
+              if(item.specialPhotos) Object.keys(item.specialPhotos).forEach(function(sp){
+                all[key+'.specialPhotos.'+sp]=[item.specialPhotos[sp]];
+              });
+            });
+          }
+        });
+      }
+      if(sec.items){
+        Object.keys(sec.items).forEach(function(itemId){
+          var item=sec.items[itemId];
+          var key='sections.'+secId+'.'+itemId;
+          if(item.photos) all[key+'.photos']=item.photos;
+          if(item.issues) item.issues.forEach(function(iss,idx){
+            if(iss.photos) all[key+'.issues.'+idx+'.photos']=iss.photos;
+          });
+          if(item.specialPhotos) Object.keys(item.specialPhotos).forEach(function(sp){
+            all[key+'.specialPhotos.'+sp]=[item.specialPhotos[sp]];
+          });
+        });
+      }
+    });
+  }
+  return all;
+  }
+  window.collectAllPhotosForCloud=collectAllPhotosForCloud;
+
+  async function cloudRestore(){
+  var token=localStorage.getItem('dc_ops_cloud_token');  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  showCloudToast('📋 获取备份列表...');
+  try{
+    var resp=await fetch(CLOUD_BACKEND_URL+'/list?appType='+CLOUD_APP_TYPE,{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    var data=await resp.json();
+    if(data.code!==0){showCloudToast('❌ '+data.message);return;}
+    var list=data.data&&data.data.backups?data.data.backups:[];
+    var listEl=document.getElementById('cloudBackupList');
+    var emptyEl=document.getElementById('cloudBackupEmpty');
+    var titleEl=document.getElementById('cloudBackupListTitle');
+    titleEl.textContent='📥 从云端恢复 ('+list.length+'个备份)';
+    if(!list.length){
+      listEl.innerHTML='';
+      emptyEl.style.display='block';
+    }else{
+      emptyEl.style.display='none';
+      _cloudBackupCache=list.filter(function(item){
+        return item.keys.some(function(k){return k.endsWith('.json');});
+      });
+      renderCloudBackupFolders();
+    }
+    document.getElementById('cloudBackupListModal').classList.add('show');
+  }catch(e){showCloudToast('❌ 获取列表失败:'+e.message);}
+}
+
+var _cloudBackupCache=[];
+function renderCloudBackupFolders(){
+  var listEl=document.getElementById('cloudBackupList');
+  var titleEl=document.getElementById('cloudBackupListTitle');
+  var emptyEl=document.getElementById('cloudBackupEmpty');
+  if(!_cloudBackupCache.length){
+    listEl.innerHTML='';
+    emptyEl.style.display='block';
+    return;
+  }
+  emptyEl.style.display='none';
+  titleEl.textContent='📁 '+CLOUD_APP_LABEL+'备份 ('+_cloudBackupCache.length+'个)';
+  var groups={};
+  _cloudBackupCache.forEach(function(item){
+    var o=item.owner||'未知';
+    if(!groups[o])groups[o]={owner:o,backups:[],latest:0};
+    groups[o].backups.push(item);
+    if(item.timestamp>groups[o].latest)groups[o].latest=item.timestamp;
+  });
+  var groupList=Object.values(groups).sort(function(a,b){return b.latest-a.latest;});
+  listEl.innerHTML=groupList.map(function(g){
+    var t=new Date(g.latest);
+    var tsStr=t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2)+' '+('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2);
+    var safeOwner=g.owner.replace(/'/g,"\\'");
+    return '<div onclick="showCloudBackupFolder(\''+safeOwner+'\')" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#f8fafc\'"><span style="font-size:24px">📂</span><div style="flex:1"><div style="font-size:15px;font-weight:600;color:#1e293b">'+g.owner+'</div><div style="font-size:12px;color:#94a3b8">'+g.backups.length+'个备份 · 最近: '+tsStr+'</div></div><span style="font-size:18px;color:#94a3b8">›</span></div>';
+  }).join('');
+}
+function showCloudBackupFolder(owner){
+  var listEl=document.getElementById('cloudBackupList');
+  var titleEl=document.getElementById('cloudBackupListTitle');
+  var emptyEl=document.getElementById('cloudBackupEmpty');
+  var backups=_cloudBackupCache.filter(function(item){return (item.owner||'未知')===owner;});
+  titleEl.innerHTML='<span onclick="renderCloudBackupFolders()" style="cursor:pointer;color:#3b82f6">📁 返回</span> <span style="color:#94a3b8">›</span> '+owner+' ('+backups.length+'个)';
+  if(!backups.length){
+    listEl.innerHTML='';
+    emptyEl.style.display='block';
+    return;
+  }
+  emptyEl.style.display='none';
+  listEl.innerHTML=backups.map(function(item){
+    var jsonKey=item.keys.find(function(k){return k.endsWith('.json');});
+    var rawName=jsonKey?jsonKey.split('/')[3]:'';
+    if(rawName)rawName=decodeURIComponent(rawName).replace(/\.json$/,'');
+    var parts=rawName?rawName.split('_'):[];
+    var dcName=parts[0]||'未命名';
+    var label=parts.length>=3?parts.slice(2).join('_'):'';
+    var ts=item.timestamp||0;
+    var t=new Date(ts);
+    var tsStr=t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2)+' '+('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2);
+    var displayName=label?label:dcName;
+    var delBtn=item.canDelete?'<button onclick="event.stopPropagation();deleteBackup(\''+item.folder+'\','+JSON.stringify(item.keys)+')" style="float:right;background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">删除</button>':'';
+    return '<div class="cloud-backup-item" onclick="doCloudRestore(\''+item.folder+'\')" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:background .15s" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#f8fafc\'"><div class="cbi-info"><div class="cbi-name" style="font-size:15px;font-weight:600;color:#1e293b;margin-bottom:4px">'+displayName+delBtn+'</div><div style="display:flex;justify-content:space-between;align-items:center"><span class="cbi-time" style="font-size:12px;color:#94a3b8">'+tsStr+'</span><span class="cbi-size" style="font-size:12px;color:#64748b">'+dcName+' · '+item.fileCount+'个文件</span></div></div></div>';
+  }).join('');
+}
+
+async function deleteBackup(folder,keys){
+  if(!confirm('确定删除此备份？删除后不可恢复。'))return;
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  try{
+    var resp=await fetch('/dc-ops-platform/api/backup/delete',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({keys:keys})
+    });
+    var data=await resp.json();
+    if(data.code===0){
+      showCloudToast('✅ 已删除备份');
+      cloudRestore();
+    }else{
+      showCloudToast('❌ '+(data.message||'删除失败'));
+    }
+  }catch(e){showCloudToast('❌ 删除失败:'+e.message);}
+}
+
+async function doCloudRestore(folder){
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  showCloudToast('📥 下载备份数据...');
+  document.getElementById('cloudBackupListModal').classList.remove('show');
+  try{
+    var listResp=await fetch(CLOUD_BACKEND_URL+'/list?appType='+CLOUD_APP_TYPE,{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    var listData=await listResp.json();
+    var backup=listData.data&&listData.data.backups?listData.data.backups.find(function(b){return b.folder===folder}):null;
+    if(!backup){showCloudToast('❌ 备份不存在');return;}
+    var dataKey=backup.keys.find(function(k){return k.endsWith('.json');});
+    if(!dataKey){showCloudToast('❌ 备份数据文件不存在');return;}
+    var downloadResp=await fetch(CLOUD_BACKEND_URL+'/download',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({key:dataKey})
+    });
+    if(!downloadResp.ok){showCloudToast('❌ 下载失败(HTTP '+downloadResp.status+')');return;}
+    var respText=await downloadResp.text();
+    var backupData;
+    try{backupData=JSON.parse(respText);}
+    catch(pe){showCloudToast('❌ 解析失败:'+pe.message+' (前100字:'+respText.substring(0,100)+')');return;}
+    if(backupData&&backupData.code!==undefined&&backupData.code!==0){
+      showCloudToast('❌ 服务器返回错误:'+(backupData.message||'未知错误'));return;
+    }
+    if(backupData._meta&&backupData._meta.appType&&backupData._meta.appType!==CLOUD_APP_TYPE){
+      var wrongType=backupData._meta.appType;
+      var wrongLabel=wrongType==='water'?'水系统':wrongType==='ahu'?'AHU系统':'其他系统';
+      showCloudToast('❌ 此备份属于'+wrongLabel+'，不能在'+CLOUD_APP_LABEL+'恢复');
+      return;
+    }
+    showConfirm('📂 恢复云端数据','恢复将覆盖当前所有考察数据，确定继续吗？',function(){
+      state.info=backupData.info||{};
+      state.sections=backupData.sections||{};
+      state.risks=backupData.risks||[];
+      state.conclusion=backupData.conclusion||'';
+      state.cabinetSummary=backupData.cabinetSummary||{};
+      state.demandCompare=backupData.demandCompare||[];
+      if(backupData.photos&&typeof backupData.photos==='object'){
+        var hasCounts=Object.values(backupData.photos).some(function(v){return typeof v==='number';});
+        if(hasCounts){
+          var photoKeys=Object.keys(backupData.photos);
+          var totalPhotos=0;
+          photoKeys.forEach(function(k){totalPhotos+=backupData.photos[k];});
+          if(totalPhotos>0){
+            showCloudToast('📥 恢复照片 (0/'+totalPhotos+')...');
+            restoreSitePhotos(folder,photoKeys,backupData.photos);
+          }else{
+            saveState();renderAll();
+            showCloudToast('✅ 数据恢复成功(无照片)');
+          }
+        }else{
+          restorePhotosFromBackup(backupData.photos);
+          saveState();renderAll();
+          showCloudToast('✅ 数据恢复成功');
+        }
+      }else{
+        saveState();renderAll();
+        showCloudToast('✅ 数据恢复成功');
+      }
+    });
+  }catch(e){showCloudToast('❌ 恢复失败:'+e.message);}
+}
+
+async function restoreSitePhotos(folder,photoKeys,photoCounts){
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  var restored=0;
+  var totalPhotos=0;
+  photoKeys.forEach(function(k){totalPhotos+=photoCounts[k];});
+  // Get backup keys to find actual photo keys
+  var listResp=await fetch(CLOUD_BACKEND_URL+'/list?appType='+CLOUD_APP_TYPE,{
+    headers:{'Authorization':'Bearer '+token}
+  });
+  var listData=await listResp.json();
+  var backup=listData.data&&listData.data.backups?listData.data.backups.find(function(b){return b.folder===folder}):null;
+  var photoKeyList=backup?backup.keys.filter(function(k){return k.endsWith('.jpg')}):[];
+  for(var ki=0;ki<photoKeys.length;ki++){
+    var pid=photoKeys[ki];
+    var count=photoCounts[pid];
+    // Set photos directly in state object based on pid path
+    var parts=pid.split('.');
+    var target=state;
+    for(var i=0;i<parts.length-1;i++){
+      if(target===null||typeof target!=='object')break;
+      if(Array.isArray(target[parts[i]])) target=target[parts[i]];
+      else if(target[parts[i]]&&typeof target[parts[i]]==='object') target=target[parts[i]];
+      else break;
+    }
+    if(target===null||typeof target!=='object'){console.warn('restoreSitePhotos: skip, target not object for pid',pid);continue;}
+    var lastKey=parts[parts.length-1];
+    if(Array.isArray(target)&&!isNaN(Number(lastKey))) target=target[Number(lastKey)];
+    if(target===null||typeof target!=='object'){console.warn('restoreSitePhotos: skip, target not object after index for pid',pid);continue;}
+    // Initialize photos array
+    if(target.photos) target.photos=[];
+    else if(target[lastKey]&&Array.isArray(target[lastKey])) target[lastKey]=[];
+    else { target.photos=[]; }
+    var photosArr=target.photos||target[lastKey]||[];
+    for(var pi=0;pi<count;pi++){
+      try{
+        // Find the matching photo key from backup keys
+        var matchKey=photoKeyList.find(function(k){return k.indexOf('/'+pid+'_'+pi+'.jpg')!==-1;});
+        if(!matchKey)matchKey=pid+'_'+pi+'.jpg'; // fallback
+        var resp=await fetch(CLOUD_BACKEND_URL+'/download',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({key:matchKey})
+        });
+        if(resp.ok){
+          var imgBlob=await resp.blob();
+          var reader=new FileReader();
+          var b64=await new Promise(function(resolve){
+            reader.onload=function(){resolve(reader.result);};
+            reader.readAsDataURL(imgBlob);
+          });
+          photosArr.push(b64);
+        }
+      }catch(e){console.error('Photo restore failed:',pid,pi,e.message);}
+      restored++;
+      if(restored%5===0||restored===totalPhotos)showCloudToast('📥 恢复照片 ('+restored+'/'+totalPhotos+')...');
+    }
+  }
+  saveState();renderAll();
+  showCloudToast('✅ 数据+照片恢复完成('+restored+'张)');
+  }
+  window.cloudRestore=cloudRestore;
+  window.renderCloudBackupFolders=renderCloudBackupFolders;
+  window.showCloudBackupFolder=showCloudBackupFolder;
+  window.deleteBackup=deleteBackup;
+  window.doCloudRestore=doCloudRestore;
+
+  function restorePhotosFromBackup(photoData){  // If backup has actual base64 photos, restore them directly to state
+  Object.keys(photoData).forEach(function(key){
+    var photos=photoData[key];
+    if(Array.isArray(photos)){
+      var parts=key.split('.');
+      var target=state;
+      for(var i=0;i<parts.length-1;i++){
+        if(target===null||typeof target!=='object')break;
+        if(Array.isArray(target[parts[i]])) target=target[parts[i]];
+        else if(target[parts[i]]&&typeof target[parts[i]]==='object') target=target[parts[i]];
+        else break;
+      }
+      if(target===null||typeof target!=='object'){console.warn('restorePhotosFromBackup: skip, target not object for key',key);return;}
+      var lastKey=parts[parts.length-1];
+      if(Array.isArray(target)&&!isNaN(Number(lastKey))) target=target[Number(lastKey)];
+      if(target===null||typeof target!=='object'){console.warn('restorePhotosFromBackup: skip, target not object after index for key',key);return;}
+      if(target.photos) target.photos=photos;
+      else if(target[lastKey]&&Array.isArray(target[lastKey])) target[lastKey]=photos;
+      else target.photos=photos;
+    }
+    });
+    }
+    window.restorePhotosFromBackup=restorePhotosFromBackup;
+
+    async function cloudShareLink(){
+    var token=localStorage.getItem('dc_ops_cloud_token');  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  showCloudToast('🔗 生成分享链接...');
+  try{
+    // Get latest backup list
+    var listResp=await fetch(CLOUD_BACKEND_URL+'/list?appType='+CLOUD_APP_TYPE,{
+      headers:{'Authorization':'Bearer '+token}
+    });
+    var listData=await listResp.json();
+    var backups=listData.data&&listData.data.backups?listData.data.backups:[];
+    if(!backups.length){
+      // No backup yet, do backup first
+      showCloudToast('☁️ 先备份数据...');
+      await cloudBackup();
+      var listResp2=await fetch(CLOUD_BACKEND_URL+'/list?appType='+CLOUD_APP_TYPE,{
+        headers:{'Authorization':'Bearer '+token}
+      });
+      var listData2=await listResp2.json();
+      backups=listData2.data&&listData2.data.backups?listData2.data.backups:[];
+    }
+    if(!backups.length){showCloudToast('❌ 无可用备份');return;}
+    // Find the latest backup's json key
+    var latest=backups[0]; // sorted desc by timestamp
+    var dataKey=latest.keys.find(function(k){return k.endsWith('.json');});
+    if(!dataKey){showCloudToast('❌ 备份数据文件不存在');return;}
+    // Get presigned download URL (7-day valid) as share link
+    var dlResp=await fetch(CLOUD_BACKEND_URL+'/download-url',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({key:dataKey})
+    });
+    var dlData=await dlResp.json();
+    if(dlData.code!==0){showCloudToast('❌ '+dlData.message);return;}
+    document.getElementById('cloudShareUrl').value=dlData.data.downloadUrl;
+    document.getElementById('cloudShareModal').classList.add('show');
+    showCloudToast('✅ 分享链接已生成(7天有效)');
+  }catch(e){showCloudToast('❌ 生成失败:'+e.message);}
+  }
+  window.cloudShareLink=cloudShareLink;
+
+  function copyShareUrl(){  var input=document.getElementById('cloudShareUrl');
+  input.select();
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(input.value).then(function(){showCloudToast('✅ 已复制到剪贴板');});
+  }else{
+    document.execCommand('copy');
+    showCloudToast('✅ 已复制到剪贴板');
+    }
+    }
+    window.copyShareUrl=copyShareUrl;
+
+    /* Tab switch */document.querySelectorAll('.nav-item').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
+    this.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+    if(this.getAttribute('data-tab')==='tabRisk') renderRisks();
+  });
+});
+
+/* Title sync */
+document.getElementById('titleInput').addEventListener('input', function(){
+  state.info.name = this.value;
+  document.getElementById('f_name').value = this.value;
+  saveState(); updateProgress();
+});
+document.getElementById('f_name').addEventListener('input', function(){
+  state.info.name = this.value;
+  document.getElementById('titleInput').value = this.value;
+  saveState(); updateProgress();
+});
+document.getElementById('f_date').addEventListener('input', function(){
+  state.info.date = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_address').addEventListener('input', function(){
+  state.info.address = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_prodDate').addEventListener('input', function(){
+  state.info.prodDate = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_procedure').addEventListener('input', function(){
+  state.info.procedure = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_building').addEventListener('input', function(){
+  state.info.building = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_scale').addEventListener('input', function(){
+  state.info.scale = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_mechElec').addEventListener('input', function(){
+  state.info.mechElec = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_demand').addEventListener('input', function(){
+  state.info.demand = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_cqcCert_yes').addEventListener('change', function(){
+  if(this.checked){state.info.cqcCert='是'; saveState(); updateProgress();}
+});
+document.getElementById('f_cqcCert_no').addEventListener('change', function(){
+  if(this.checked){state.info.cqcCert='否'; saveState(); updateProgress();}
+});
+document.getElementById('f_staffSummary').addEventListener('input', function(){
+  state.info.staffSummary = this.value; saveState(); updateProgress();
+});
+document.getElementById('f_refPower').addEventListener('input', function(){
+  state.info.cabinetSummary.refPower = Number(this.value)||13; saveState(); renderSections();
+});
+document.getElementById('f_convertCycle').addEventListener('input', function(){
+  state.info.cabinetSummary.convertCycle = this.value; saveState(); updateProgress();
+});
+// Demand compare table events
+for(var dci=0;dci<3;dci++){
+  (function(idx){
+    var needEl=document.getElementById('f_dc'+idx+'_need');
+    var provEl=document.getElementById('f_dc'+idx+'_provide');
+    var solEl=document.getElementById('f_dc'+idx+'_solution');
+    var yesEl=document.getElementById('f_dc'+idx+'_yes');
+    var noEl=document.getElementById('f_dc'+idx+'_no');
+    if(needEl)needEl.addEventListener('input',function(){
+      state.info.demandCompare[idx].need=this.value;saveState();
+    });
+    if(provEl)provEl.addEventListener('input',function(){
+      state.info.demandCompare[idx].provide=this.value;saveState();
+    });
+    if(solEl)solEl.addEventListener('input',function(){
+      state.info.demandCompare[idx].solution=this.value;saveState();
+    });
+    if(yesEl)yesEl.addEventListener('change',function(){
+      state.info.demandCompare[idx].satisfy='是';saveState();
+    });
+    if(noEl)noEl.addEventListener('change',function(){
+      state.info.demandCompare[idx].satisfy='否';saveState();
+    });
+  })(dci);
+}
+
+/* Conclusion */
+document.querySelectorAll('#conclusionRadio input').forEach(function(r){
+  r.addEventListener('change', function(){ state.conclusion.result = this.value; saveState(); });
+});
+document.getElementById('conclusionDesc').addEventListener('input', function(){
+  state.conclusion.desc = this.value; saveState();
+});
+
+/* Risk events (delegated) */
+document.getElementById('riskList').addEventListener('input', function(e){
+  var el = e.target;
+  var idx = el.getAttribute('data-risk');
+  var fld = el.getAttribute('data-rfield');
+  if(idx !== null && idx !== undefined && fld){
+    state.risks[Number(idx)][fld] = el.value;
+    saveState();
+  }
+});
+document.getElementById('riskList').addEventListener('click', function(e){
+  var btn = e.target.closest('[data-risk-del]');
+  if(btn){
+    state.risks.splice(Number(btn.getAttribute('data-risk-del')),1);
+    saveState(); renderRisks();
+  }
+});
+document.getElementById('btnAddRisk').addEventListener('click', function(){
+  if(!state.risks) state.risks = [];
+  state.risks.push({sourceKey:'',source:'',desc:'',level:'中',scope:'',suggest:''});
+  saveState(); renderRisks();
+});
+
+/* Photo viewer */
+document.getElementById('viewerClose').addEventListener('click', function(){
+  document.getElementById('photoViewer').classList.remove('show');
+});
+document.getElementById('photoViewer').addEventListener('click', function(e){
+  if(e.target === this) this.classList.remove('show');
+});
+
+/* More menu toggle */
+document.getElementById('btnMore').addEventListener('click', function(e){
+  e.stopPropagation();
+  document.getElementById('moreMenu').classList.toggle('show');
+});
+document.addEventListener('click', function(e){
+  var mm=document.getElementById('moreMenu');
+  if(mm && mm.classList.contains('show') && !mm.contains(e.target) && e.target.id!=='btnMore'){
+    mm.classList.remove('show');
+  }
+});
+
+/* Check unfilled */
+document.getElementById('menuHelp').addEventListener('click', function(){
+  document.getElementById('moreMenu').classList.remove('show');
+  document.getElementById('helpModal').classList.add('show');
+});
+
+/* Go home */
+document.getElementById('btnHome').addEventListener('click', function(){
+  window.location.href='/dc-ops-platform/';
+});
+
+/* Generate issues */
+document.getElementById('menuGenIssues').addEventListener('click', function(){
+  document.getElementById('moreMenu').classList.remove('show');
+  generateIssues();
+});
+document.getElementById('genIssuesCancel').addEventListener('click', function(){
+  document.getElementById('genIssuesModal').classList.remove('show');
+});
+document.getElementById('btnCloseHelp').addEventListener('click', function(){
+  document.getElementById('helpModal').classList.remove('show');
+});
+document.getElementById('helpModal').addEventListener('click', function(e){
+  if(e.target === this) this.classList.remove('show');
+});
+document.getElementById('btnCheck').addEventListener('click', function(){
+  showCheckResult();
+});
+document.getElementById('checkClose').addEventListener('click', function(){
+  document.getElementById('checkModal').style.display='none';
+});
+
+/* Clear */
+document.getElementById('menuClear').addEventListener('click', function(){
+  document.getElementById('moreMenu').classList.remove('show');
+  showModal('确认清空', '确定要清空所有数据吗？此操作不可恢复。', function(){
+    state = defaultState(); saveState(); clearAllPhotoIDB(); render();
+  });
+});
+
+function showModal(title, msg, onConfirm){
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalMsg').textContent = msg;
+  document.getElementById('confirmModal').classList.add('show');
+  var cfBtn = document.getElementById('modalConfirm');
+  var ccBtn = document.getElementById('modalCancel');
+  function cleanup(){
+    document.getElementById('confirmModal').classList.remove('show');
+    cfBtn.removeEventListener('click', onOk);
+    ccBtn.removeEventListener('click', onCancel);
+  }
+  function onOk(){ cleanup(); if(onConfirm) onConfirm(); }
+  function onCancel(){ cleanup(); }
+  cfBtn.addEventListener('click', onOk);
+  ccBtn.addEventListener('click', onCancel);
+}
+
+/* Generate issues from risks */
+function generateIssues(){
+  var levelMap={'高':'level1','中':'level2','低':'level3'};
+  var items=[];
+  (state.risks||[]).forEach(function(r){
+    if(!r.desc||!r.desc.trim())return;
+    var sev=levelMap[r.level];
+    if(!sev)return;
+    items.push({
+      title:r.desc.trim().substring(0,80),
+      severity:sev,
+      description:r.scope||'',
+      suggestion:r.suggest||'',
+      risk:r.desc||'',
+      dimension1:r.source||''
+    });
+  });
+  if(items.length===0){
+    showCloudToast('暂无风险记录或风险等级未设置');
+    return;
+  }
+  document.getElementById('genDcName').value=state.info.name||'';
+  document.getElementById('genIssuesConfirm').onclick=function(){
+    var dcName=document.getElementById('genDcName').value.trim();
+    if(!dcName){showCloudToast('请输入数据中心名称');return;}
+    var dcAm=document.getElementById('genDcAm').value.trim();
+    if(!dcAm){showCloudToast('请输入客户经理姓名');return;}
+    var dcAmPhone=document.getElementById('genDcAmPhone').value.trim();
+    var dcAmEmail=document.getElementById('genDcAmEmail').value.trim();
+    var dcManager=document.getElementById('genDcManager').value.trim();
+    var dcPfd=document.getElementById('genDcPfd').value;
+    document.getElementById('genIssuesModal').classList.remove('show');
+    doGenerateIssues(items,dcName,dcAm,dcAmPhone,dcAmEmail,dcManager,dcPfd);
+  };
+  document.getElementById('genIssuesModal').classList.add('show');
+}
+async function doGenerateIssues(items,dcName,dcAm,dcAmPhone,dcAmEmail,dcManager,dcPfd){
+  var token=localStorage.getItem('dc_ops_cloud_token');
+  if(!token){token=new URLSearchParams(window.location.search).get('token')||localStorage.getItem('dc_ops_token');}
+  if(!token){showCloudToast('❌ 请先登录云备份');return;}
+  showCloudToast('⏳ 正在推送'+items.length+'个问题...');
+  try{
+    var resp=await fetch(CLOUD_BACKEND_URL.replace('/backup','/issues/from-pwa'),{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        source:CLOUD_APP_TYPE,
+        dc_name:dcName||state.info.name||'未知机房',
+        dc_am:dcAm,
+        dc_am_phone:dcAmPhone||undefined,
+        dc_am_email:dcAmEmail||undefined,
+        dc_manager:dcManager||undefined,
+        dc_pfd:dcPfd||undefined,
+        items:items
+      })
+    });
+    var data=await resp.json();
+    if(data.code===0){
+      showCloudToast('✅ 成功推送'+data.data.success+'个问题'+(data.data.failed>0?'，'+data.data.failed+'个失败':''),5000);
+    }else{
+      showCloudToast('❌ '+(data.message||'推送失败'),5000);
+    }
+  }catch(e){
+    showCloudToast('❌ 推送失败: '+e.message,5000);
+  }
+}
+
+/* Export */
+document.getElementById('btnExport').addEventListener('click', function(){
+  exportExcel();
+});
+
+async function exportExcel(){
+  var workbook = new ExcelJS.Workbook();
+
+  /* Sheet 1 */
+  var ws1 = workbook.addWorksheet('机房信息及概况');
+  ws1.columns = [{width:22},{width:50},{width:20},{width:30}];
+  var r1 = ws1.addRow(['数据中心勘察报告']);
+  r1.font = {size:16,bold:true};
+  ws1.mergeCells('A1:D1');
+  ws1.addRow([]);
+  var r2 = ws1.addRow(['机房信息']);
+  r2.font = {size:13,bold:true,color:{argb:'FFF97316'}};
+  ws1.addRow(['机房名称', state.info.name]);
+  ws1.addRow(['考察时间', state.info.date]);
+  ws1.addRow(['机房地址', state.info.address]);
+  ws1.addRow(['机房投产时间', state.info.prodDate]);
+  ws1.addRow(['手续（总能耗指标）', state.info.procedure||'']);
+  ws1.addRow(['建筑情况', state.info.building||'']);
+  ws1.addRow(['规模概况', state.info.scale||'']);
+  ws1.addRow(['机电概况', state.info.mechElec||'']);
+  ws1.addRow(['我方技术需求', state.info.demand||'']);
+  ws1.addRow(['认证(是否取得CQC-A级)', state.info.cqcCert||'']);
+  ws1.addRow(['运维人员概括', state.info.staffSummary||'']);
+  if(state.info.photos && state.info.photos.length){
+    var ipRow = ws1.addRow(['现场照片']);
+    var ic=2;
+    state.info.photos.forEach(function(p){
+      try{var iid=workbook.addImage({base64:p,extension:'jpeg'});ws1.addImage(iid,{tl:{col:ic-1,row:ipRow.number-1},ext:{width:120,height:90}});ic+=2.5;}catch(e){}
+    });
+  }
+  ws1.addRow([]);
+
+  var csr=ws1.addRow(['机柜支持情况']);
+  csr.font={size:12,bold:true,color:{argb:'FFF97316'}};
+  var cs=state.info.cabinetSummary;
+  var pa=cs.refPower||13;
+  ws1.addRow(['独立模块可用机柜数', cs.indepCabinets||0]);
+  ws1.addRow(['折算'+pa+'KW机柜数', cs.convertA||0]);
+  ws1.addRow(['非独立模块可用机柜总数', cs.nonIndepCabinets||0]);
+  ws1.addRow(['折算'+pa+'KW机柜数(非独立)', cs.nonIndepA||0]);
+  ws1.addRow(['改造周期', cs.convertCycle||'']);
+  ws1.addRow([]);
+  var dcr=ws1.addRow(['技术需求对比']);
+  dcr.font={size:12,bold:true,color:{argb:'FFF97316'}};
+  var dcH=ws1.addRow(['对比项','技术需求','机房可提供','是否满足','解决方案']);
+  dcH.font={bold:true};
+  state.info.demandCompare.forEach(function(row){
+    ws1.addRow([row.item||'',row.need||'',row.provide||'',row.satisfy||'\\',row.solution||'\\']);
+  });
+  ws1.addRow([]);
+
+  SECTIONS.forEach(function(sec){
+    var sr = ws1.addRow([sec.title.replace(/^3\.\d+\s/,'')]);
+    sr.font = {size:13,bold:true,color:{argb:'FFF97316'}};
+    sec.items.forEach(function(item){
+      if(item.type==='total') return;
+      var sd = state.sections[sec.id][item.id];
+      var val = '';
+      if(item.type==='radio') val = sd.value||'';
+      else if(item.type==='checkbox') val = (sd.values||[]).join('/');
+      else if(item.type==='number'){
+        val = (sd.value||0)+(item.unit||'');
+        if(item.checks && sd.checkValues && sd.checkValues.length) val += ' ('+sd.checkValues.join('/')+')';
+      }
+      else if(item.type==='duty') val = '人/班:'+sd.perShift+' 班倒:'+sd.shifts+' 总计:'+sd.total;
+      else if(item.type==='condRadio'){
+        val = sd.value||'';
+        if(sd.value==='是' && sd.condText) val += ' ('+sd.condText+')';
+      }
+      else val = sd.text||'';
+      ws1.addRow([item.label, val]);
+      if(sd.issues && sd.issues.length){
+        var issueTexts = sd.issues.map(function(iss){return typeof iss==='object'?iss.text:iss;}).filter(Boolean);
+        if(issueTexts.length) ws1.addRow(['  问题记录', issueTexts.join('；')]);
+        sd.issues.forEach(function(iss,idx){
+          if(typeof iss==='object' && iss.photos && iss.photos.length){
+            var iRow = ws1.addRow(['  问题照片'+(idx+1)]);
+            var c2=2;
+            iss.photos.forEach(function(p){
+              try{var iid=wb.addImage({base64:p,extension:'jpeg'});ws1.addImage(iid,{tl:{col:c2-1,row:iRow.number-1},ext:{width:120,height:90}});c2+=2.5;}catch(e){}
+            });
+          }
+        });
+      }
+      var allPhotos = (sd.photos||[]).slice();
+      if(item.specialPhotos && sd.specialPhotos) sd.specialPhotos.forEach(function(sp){if(sp) allPhotos.push(sp);});
+      if(allPhotos.length){
+        var imgRow = ws1.addRow(['  现场照片']);
+        var col = 2;
+        for(var pi=0; pi<allPhotos.length && pi<6; pi++){
+          try{
+            var b64 = allPhotos[pi].split(',')[1];
+            var iid = workbook.addImage({base64:b64,extension:'jpeg'});
+            ws1.addImage(iid,{tl:{col:col,row:imgRow.number-1},ext:{width:120,height:90}});
+            col += 2;
+          }catch(ex){}
+        }
+        ws1.addRow([]);
+      }
+    });
+    // Room items
+    if(sec.roomItems){
+      (state.sections[sec.id].rooms||[]).forEach(function(room, ri){
+        var roomLabel = room.name ? ' ('+room.name+')' : ' (房间'+(ri+1)+')';
+        var rr = ws1.addRow(['  房间'+(ri+1)+roomLabel]);
+        rr.font = {size:12,bold:true,color:{argb:'FFEA580C'}};
+        sec.roomItems.forEach(function(ri_item){
+          var rd = room.items && room.items[ri_item.id];
+          if(!rd) return;
+          var val = rd.text||'';
+          ws1.addRow(['  '+ri_item.label, val]);
+          if(rd.issues && rd.issues.length){
+            var issueTexts = rd.issues.map(function(iss){return typeof iss==='object'?iss.text:iss;}).filter(Boolean);
+            if(issueTexts.length) ws1.addRow(['    问题记录', issueTexts.join('；')]);
+          }
+          var allPhotos = (rd.photos||[]).slice();
+          if(ri_item.specialPhotos && rd.specialPhotos) rd.specialPhotos.forEach(function(sp){if(sp) allPhotos.push(sp);});
+          if(allPhotos.length){
+            var imgRow = ws1.addRow(['    现场照片']);
+            var col = 2;
+            for(var pi=0; pi<allPhotos.length && pi<6; pi++){
+              try{
+                var b64 = allPhotos[pi].split(',')[1];
+                var iid = workbook.addImage({base64:b64,extension:'jpeg'});
+                ws1.addImage(iid,{tl:{col:col-1,row:imgRow.number-1},ext:{width:120,height:90}});
+                col += 2;
+              }catch(ex){}
+            }
+            ws1.addRow([]);
+          }
+        });
+      });
+    }
+    ws1.addRow([]);
+  });
+
+  // Cabinet power statistics table
+  var cprs=ws1.addRow(['机柜功率统计']);
+  cprs.font={size:12,bold:true,color:{argb:'FFF97316'}};
+  var pa2=cs.refPower||13;
+  var crH=ws1.addRow(['机房编号','单机柜功率KW','是否独立模块','可用机柜数量','折算'+pa2+'KW']);
+  crH.font={bold:true};
+  var crows=state.info.cabinetRows||[];
+  var tCab=0,tA=0;
+  crows.forEach(function(cr){
+    ws1.addRow([cr.roomId||'',cr.cabinetPower||'',cr.isIndepModule||'',cr.cabinetCount||0,cr.convertA||0]);
+    tCab+=Number(cr.cabinetCount)||0;tA+=Number(cr.convertA)||0;
+  });
+  ws1.addRow(['合计','','',tCab,tA]);
+  ws1.addRow([]);
+
+  /* Sheet 2 */
+  var ws2 = workbook.addWorksheet('风险统计');
+  ws2.columns = [{width:30},{width:10},{width:25},{width:25}];
+  var rh = ws2.addRow(['风险描述','等级','影响范围','整改建议']);
+  rh.font = {bold:true};
+  (state.risks||[]).forEach(function(r){
+    ws2.addRow([r.desc||'', r.level||'', r.scope||'', r.suggest||'']);
+  });
+
+  /* Sheet 3 */
+  var ws3 = workbook.addWorksheet('结论');
+  ws3.columns = [{width:22},{width:50}];
+  var cr = ws3.addRow(['勘察结论']);
+  cr.font = {size:13,bold:true,color:{argb:'FFF97316'}};
+  ws3.addRow(['是否满足金山云选址标准', state.conclusion.result||'']);
+  ws3.addRow(['结论描述', state.conclusion.desc||'']);
+
+  var buf = await workbook.xlsx.writeBuffer();
+    var blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var fileName = (state.info.name||'数据中心')+'勘察报告.xlsx';
+    var file = new File([blob],fileName,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:fileName}).then(function(){
+        showToast('✅ 分享成功');
+      }).catch(function(e){
+        if(e.name!=='AbortError') downloadBlob(blob,fileName);
+      });
+    }else{
+      downloadBlob(blob,fileName);
+    }
+}
+
+function buildReportHTML(){
+  var h='<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.8;padding:20px;max-width:800px;margin:0 auto;color:#333}h1{text-align:center;font-size:22px;margin-bottom:20px;color:#1F2937}h2{font-size:18px;color:#F97316;border-bottom:2px solid #F97316;padding-bottom:4px;margin-top:24px}h3{font-size:16px;color:#EA580C;margin-top:16px}p{margin:6px 0}table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #999;padding:6px 10px;font-size:13px;vertical-align:top}th{background:#EFF6FF;color:#1F2937;font-weight:bold}.photos{margin:8px 0;column-count:3;column-gap:6px}.photos img{width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px}.issue{color:#DC2626;font-size:13px;margin:4px 0 8px;padding:4px 8px;background:#FEF2F2;border-radius:4px}</style></head><body>';
+
+  h+='<h1>'+(state.info.name||'数据中心')+'勘察报告</h1>';
+  h+='<p><b>机房名称：</b>'+(state.info.name||'')+'</p>';
+  h+='<p><b>考察时间：</b>'+(state.info.date||'')+'</p>';
+  h+='<p><b>机房地址：</b>'+(state.info.address||'')+'</p>';
+  h+='<p><b>机房投产时间：</b>'+(state.info.prodDate||'')+'</p>';
+  h+='<p><b>手续（总能耗指标）：</b>'+(state.info.procedure||'')+'</p>';
+  h+='<p><b>建筑情况：</b>'+(state.info.building||'')+'</p>';
+  h+='<p><b>规模概况：</b>'+(state.info.scale||'')+'</p>';
+  h+='<p><b>机电概况：</b>'+(state.info.mechElec||'')+'</p>';
+  h+='<p><b>我方技术需求：</b>'+(state.info.demand||'')+'</p>';
+  h+='<p><b>认证：</b>'+(state.info.cqcCert==='是'?'已取得CQC-A级':state.info.cqcCert==='否'?'未取得':'')+'</p>';
+  h+='<p><b>运维人员概括：</b>'+(state.info.staffSummary||'')+'</p>';
+  if(state.info.photos && state.info.photos.length){
+    var validP=state.info.photos.filter(function(p){return p&&p.length>20;});
+    if(validP.length){
+      h+='<div class="photos" style="margin:8px 0;column-count:3;column-gap:6px">';
+      validP.forEach(function(p,i){var src=p;h+='<img src="'+src+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px">';});
+      h+='</div>';
+    }
+  }
+
+  var cs=state.info.cabinetSummary;
+  if(true){
+    var pa=cs.refPower||13;
+    h+='<h2>机柜支持情况</h2>';
+    h+='<p><b>独立模块可用机柜数：</b>'+(cs.indepCabinets||0)+'</p>';
+    h+='<p><b>折算'+pa+'KW机柜数：</b>'+(cs.convertA||0)+'</p>';
+    h+='<p><b>非独立模块可用机柜总数：</b>'+(cs.nonIndepCabinets||0)+'</p>';
+    h+='<p><b>折算'+pa+'KW机柜数(非独立)：</b>'+(cs.nonIndepA||0)+'</p>';
+    if(cs.convertCycle) h+='<p><b>改造周期：</b>'+cs.convertCycle+'</p>';
+  }
+  // Cabinet power statistics table
+  var crows=state.info.cabinetRows||[];
+  if(crows.length){
+    h+='<h2>机柜功率统计</h2>';
+    h+='<table><tr><th>机房编号</th><th>单机柜功率KW</th><th>是否独立模块</th><th>可用机柜数量</th><th>折算'+pa+'KW</th></tr>';
+    var tCab=0,tA=0;
+    crows.forEach(function(cr){
+      h+='<tr><td>'+esc(cr.roomId||'')+'</td><td>'+esc(cr.cabinetPower||'')+'</td><td>'+(cr.isIndepModule||'')+'</td><td>'+(cr.cabinetCount||0)+'</td><td>'+(cr.convertA||0)+'</td></tr>';
+      tCab+=Number(cr.cabinetCount)||0;tA+=Number(cr.convertA)||0;
+    });
+    h+='<tr style="font-weight:600"><td>合计</td><td></td><td></td><td>'+tCab+'</td><td>'+tA+'</td></tr>';
+    h+='</table>';
+  }
+  var dc=state.info.demandCompare;
+  if(dc&&dc.length){
+    h+='<h2>技术需求对比</h2>';
+    h+='<table><tr><th>对比项</th><th>技术需求</th><th>机房可提供</th><th>是否满足</th><th>解决方案</th></tr>';
+    dc.forEach(function(row){
+      h+='<tr><td>'+(row.item||'')+'</td><td>'+(row.need||'')+'</td><td>'+(row.provide||'')+'</td><td>'+(row.satisfy||'\\')+'</td><td>'+(row.solution||'\\')+'</td></tr>';
+    });
+    h+='</table>';
+  }
+
+  h+='<h2>机房概况</h2>';
+  SECTIONS.forEach(function(sec){
+    h+='<h3>'+sec.title.replace(/^3\.\d+\s/,'')+'</h3>';
+    sec.items.forEach(function(item){
+      if(item.type==='total') return;
+      var sd=state.sections[sec.id][item.id];
+      var val='';
+      if(item.type==='radio') val=sd.value||'';
+      else if(item.type==='checkbox') val=(sd.values||[]).join('、');
+      else if(item.type==='number'){
+        val=(sd.value||0)+(item.unit||'');
+        if(item.checks&&sd.checkValues&&sd.checkValues.length) val+=' ('+sd.checkValues.join('/')+')';
+      }
+      else if(item.type==='duty') val='人/班:'+sd.perShift+' 班倒:'+sd.shifts+' 总计:'+sd.total+'人';
+      else if(item.type==='condRadio'){
+        val=sd.value||'';
+        if(sd.value==='是'&&sd.condText) val+=' ('+sd.condText+')';
+      }
+      else val=sd.text||'';
+
+      h+='<p><b>'+item.label+'：</b>'+(val||'（见下方照片）')+'</p>';
+
+      var fieldP=(sd.photos||[]).slice();
+      if(item.specialPhotos&&sd.specialPhotos) sd.specialPhotos.forEach(function(sp){if(sp&&sp.length>20)fieldP.push(sp);});
+      fieldP=fieldP.filter(function(p){return p&&p.length>20;});
+      if(fieldP.length){
+        h+='<div class="photos" style="margin:8px 0;column-count:3;column-gap:6px">';
+        fieldP.forEach(function(ph,pi){var src=ph;h+='<img src="'+src+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px">';});
+        h+='</div>';
+      }
+
+      if(sd.issues && sd.issues.length){
+        var issueTexts = sd.issues.map(function(iss){return typeof iss==='object'?iss.text:iss;}).filter(Boolean);
+        if(issueTexts.length) h+='<div class="issue">⚠️ 问题记录：'+issueTexts.join('；')+'</div>';
+        sd.issues.forEach(function(iss,idx){
+          if(typeof iss==='object' && iss.photos && iss.photos.length){
+                       var validIP=iss.photos.filter(function(p){return p&&p.length>20;});
+                       if(validIP.length){
+                         h+='<p><b>问题照片'+(idx+1)+'：</b></p><div class="photos" style="margin:8px 0;column-count:3;column-gap:6px">';
+                                                   validIP.forEach(function(p,pi){var src=p;h+='<img src="'+src+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px">';});
+                                                   h+='</div>';                       }
+                     }        });
+      }
+    });
+    if(sec.roomItems){
+      (state.sections[sec.id].rooms||[]).forEach(function(room, ri){
+        var roomLabel = room.name ? ' ('+room.name+')' : '';
+        h+='<h3>房间'+(ri+1)+roomLabel+'</h3>';
+        sec.roomItems.forEach(function(ri_item){
+          var rd = room.items && room.items[ri_item.id];
+          if(!rd) return;
+          var val = rd.text||'';
+          h+='<p><b>'+ri_item.label+'：</b>'+(val||'（见下方照片）')+'</p>';
+
+          var fieldP=(rd.photos||[]).slice();
+          if(ri_item.specialPhotos&&rd.specialPhotos) rd.specialPhotos.forEach(function(sp){if(sp&&sp.length>20)fieldP.push(sp);});
+          fieldP=fieldP.filter(function(p){return p&&p.length>20;});
+          if(fieldP.length){
+            h+='<div class="photos" style="margin:8px 0;column-count:3;column-gap:6px">';
+            fieldP.forEach(function(ph,pi){var src=ph;h+='<img src="'+src+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px">';});
+            h+='</div>';
+          }
+
+          if(rd.issues && rd.issues.length){
+            var issueTexts = rd.issues.map(function(iss){return typeof iss==='object'?iss.text:iss;}).filter(Boolean);
+            if(issueTexts.length) h+='<div class="issue">⚠️ 问题记录：'+issueTexts.join('；')+'</div>';
+            rd.issues.forEach(function(iss,idx){
+              if(typeof iss==='object' && iss.photos && iss.photos.length){
+                               var validIP=iss.photos.filter(function(p){return p&&p.length>20;});
+                               if(validIP.length){
+                                 h+='<p><b>问题照片'+(idx+1)+'：</b></p><div class="photos" style="margin:8px 0;column-count:3;column-gap:6px">';
+                                                                   validIP.forEach(function(p,pi){var src=p;h+='<img src="'+src+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px">';});
+                                                                   h+='</div>';                               }
+                             }            });
+          }
+        });
+      });
+    }
+  });
+
+  h+='<h2>风险点</h2>';
+  if(state.risks&&state.risks.length){
+    h+='<table><tr><th>风险描述</th><th>等级</th><th>影响范围</th><th>整改建议</th></tr>';
+    state.risks.forEach(function(r){
+      h+='<tr><td>'+(r.desc||'')+'</td><td>'+(r.level||'')+'</td><td>'+(r.scope||'')+'</td><td>'+(r.suggest||'')+'</td></tr>';
+    });
+    h+='</table>';
+  } else {
+    h+='<p>暂无风险记录</p>';
+  }
+
+  h+='<h2>结论</h2>';
+  h+='<p><b>是否满足金山云选址标准：</b>'+(state.conclusion.result||'待定')+'</p>';
+  if(state.conclusion.desc) h+='<p>'+(state.conclusion.desc||'').replace(/\n/g,'<br>')+'</p>';
+
+  h+='</body></html>';
+  return h;
+}
+
+function exportWord(){
+  var h=buildReportHTML();
+  document.getElementById('reportContent').innerHTML=h;
+  document.getElementById('reportModal').style.display='flex';
+}
+
+function closeReport(){document.getElementById('reportModal').style.display='none'}
+
+async function shareReport(){
+  try{
+  var h=document.getElementById('reportContent').innerHTML;
+  var regex=/<img\s+src="([^"]+)"\s+style="[^"]*"/g;
+  var matches=[];
+  var m;
+  while((m=regex.exec(h))!==null){matches.push({src:m[1],idx:m.index,len:m[0].length});}
+  if(matches.length>0){
+    var resized=[];
+    for(var i=0;i<matches.length;i++){
+      if(!matches[i].src||matches[i].src.length<20){resized.push('');continue;}
+      showToast('⏳ 处理照片 '+(i+1)+'/'+matches.length);
+      var result=await new Promise(function(resolve){
+        var src=matches[i].src;
+        var timer=setTimeout(function(){resolve('');},8000);
+        if(src.indexOf('data:image')===0){
+          var img=new Image();
+          img.onload=function(){clearTimeout(timer);
+            var pw=300;if(img.width<=pw){resolve(src);return;}
+            var canvas=document.createElement('canvas');
+            var ratio=pw/img.width;
+            canvas.width=pw;canvas.height=Math.round(img.height*ratio);
+            canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+            try{resolve(canvas.toDataURL('image/jpeg',0.6));}
+            catch(e){resolve(src);}
+          };
+          img.onerror=function(){clearTimeout(timer);resolve('');};
+          img.src=src;
+        }else{
+          fetch(src,{mode:'cors'}).then(function(r){return r.blob();}).then(function(blob){
+            var url=URL.createObjectURL(blob);
+            var img=new Image();
+            img.onload=function(){clearTimeout(timer);URL.revokeObjectURL(url);
+              var pw=300;var canvas=document.createElement('canvas');
+              var ratio=1;if(img.width>pw)ratio=pw/img.width;
+              canvas.width=Math.round(img.width*ratio);canvas.height=Math.round(img.height*ratio);
+              canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+              try{resolve(canvas.toDataURL('image/jpeg',0.6));}
+              catch(e){resolve(src);}
+            };
+            img.onerror=function(){clearTimeout(timer);URL.revokeObjectURL(url);resolve('');};
+            img.src=url;
+          }).catch(function(){clearTimeout(timer);resolve('');});
+        }
+      });
+      resized.push(result);
+    }
+    for(var i=matches.length-1;i>=0;i--){
+      if(!resized[i]){
+        h=h.substring(0,matches[i].idx)+h.substring(matches[i].idx+matches[i].len);
+      }else{
+        var newTag='<img src="'+resized[i]+'" style="width:100%;height:auto;break-inside:avoid;margin-bottom:6px;border-radius:4px"';
+        h=h.substring(0,matches[i].idx)+newTag+h.substring(matches[i].idx+matches[i].len);
+      }
+    }
+  }
+  showToast('✅ 照片处理完成，生成报告中...');
+  await new Promise(function(r){setTimeout(r,300);});
+  // Wrap as full HTML document for sharing
+  var fullH='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">'+h+'</body></html>';
+  doShare(fullH);
+  }catch(e){
+    console.error('shareReport error:',e);
+    showToast('❌ 导出出错:'+e.message);
+  }
+}
+
+function doShare(h){
+  var fileName=(state.info.name||'数据中心')+'勘察报告.html';
+  var blob=new Blob([h],{type:'text/html;charset=utf-8'});
+  var sizeMB=(blob.size/1024/1024).toFixed(1);
+  showToast('📄 报告生成完成('+sizeMB+'MB)，正在导出...');
+  setTimeout(function(){
+    // If file too large (>5MB), strip images and warn
+    if(blob.size>5*1024*1024){
+      showToast('⚠️ 文件较大('+sizeMB+'MB)，正在压缩...');
+      var stripped=h.replace(/<img[^>]*>/g,'[照片]');
+      blob=new Blob([stripped],{type:'text/html;charset=utf-8'});
+      sizeMB=(blob.size/1024/1024).toFixed(1);
+    }
+    var file=new File([blob],fileName,{type:'text/html;charset=utf-8'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:fileName}).then(function(){
+        showToast('✅ 分享成功');
+      }).catch(function(e){
+        if(e.name!=='AbortError'){
+          // Share failed, fallback to download
+          downloadBlob(blob,fileName);
+        }
+      });
+    }else{
+      // Desktop browser: download directly
+      downloadBlob(blob,fileName);
+    }
+  },800);
+}
+
+function downloadBlob(blob,fileName){
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download=fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  showToast('✅ 文件已下载: '+fileName);
+}
+
+function showUrlOnScreen(url,fileName){
+  // Show a simple overlay with the URL that user can long-press to copy
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px';
+  d.innerHTML='<div style="background:#fff;border-radius:12px;padding:20px;max-width:340px;width:100%;max-height:80vh;overflow:auto">'
+    +'<h4 style="margin:0 0 10px;font-size:16px">📎 '+esc(fileName)+'</h4>'
+    +'<p style="margin:0 0 8px;font-size:13px;color:#666">长按下方链接可复制，然后打开微信粘贴发送：</p>'
+    +'<div style="background:#F0F9FF;border:1px solid #3B82F6;border-radius:8px;padding:12px;word-break:break-all;font-size:14px;color:#2563EB;-webkit-user-select:all;user-select:all">'+esc(url)+'</div>'
+    +'<button style="margin-top:14px;width:100%;padding:10px;border:none;border-radius:8px;background:#F97316;color:#fff;font-size:15px;cursor:pointer" id="closeUrlBtn">关闭</button>'
+    +'</div>';
+  document.body.appendChild(d);
+  document.getElementById('closeUrlBtn').addEventListener('click',function(){document.body.removeChild(d);});
+}
+
+document.getElementById('btnExportWord').addEventListener('click',function(){
+  exportWord();
+});
+
+document.getElementById('btnCloseReport').addEventListener('click',closeReport);
+document.getElementById('btnShareReport').addEventListener('click',shareReport);
+
+async function exportPhotoBackup(){
+  var zip=new JSZip();
+  var count=0;
+  function addPhoto(base64,folder,name){
+    if(!base64||base64.indexOf('data:image')!==0)return;
+    var ext=base64.indexOf('data:image/png')===0?'png':'jpg';
+    var data=base64.split(',')[1];
+    zip.folder(folder).file(name+'.'+ext,data,{base64:true});
+    count++;
+  }
+  // Info photos
+  (state.info.photos||[]).forEach(function(p,i){addPhoto(p,'01_机房信息','现场照片_'+(i+1));});
+  // Section items
+  SECTIONS.forEach(function(sec){
+    var secLabel=sec.title.replace(/^3\.\d+\s/,'').replace(/[⚡❄️🖥️👥📌]/g,'').trim();
+    var secIdx=sec.id==='s_power'?'02':sec.id==='s_itRoom'?'03':sec.id==='s_hvac'?'04':sec.id==='s_staff'?'05':'06';
+    var prefix=secIdx+'_'+secLabel;
+    sec.items.forEach(function(item){
+      if(item.type==='total')return;
+      var sd=state.sections[sec.id][item.id];
+      var itemLabel=item.label.replace(/[\/\\:*?"<>|]/g,'_');
+      (sd.photos||[]).forEach(function(p,i){addPhoto(p,prefix+'/'+itemLabel,'现场照片_'+(i+1));});
+      if(item.specialPhotos&&sd.specialPhotos) sd.specialPhotos.forEach(function(sp,i){if(sp)addPhoto(sp,prefix+'/'+itemLabel,item.specialPhotos[i]+'_'+(i+1));});
+      (sd.issues||[]).forEach(function(iss,ii){
+        if(typeof iss==='object'&&(iss.photos||[]).length){
+          iss.photos.forEach(function(p,pi){addPhoto(p,prefix+'/'+itemLabel,'问题照片_'+(ii+1)+'_'+(pi+1));});
+        }
+      });
+    });
+    if(sec.roomItems){
+      (state.sections[sec.id].rooms||[]).forEach(function(room,ri){
+        var roomLabel=room.name?('房间'+(ri+1)+'_'+room.name):'房间'+(ri+1);
+        sec.roomItems.forEach(function(ri_item){
+          var rd=room.items&&room.items[ri_item.id];
+          if(!rd)return;
+          var itemLabel=ri_item.label.replace(/[\/\\:*?"<>|]/g,'_');
+          (rd.photos||[]).forEach(function(p,i){addPhoto(p,prefix+'/'+roomLabel+'/'+itemLabel,'现场照片_'+(i+1));});
+          if(ri_item.specialPhotos&&rd.specialPhotos) rd.specialPhotos.forEach(function(sp,i){if(sp)addPhoto(sp,prefix+'/'+roomLabel+'/'+itemLabel,ri_item.specialPhotos[i]+'_'+(i+1));});
+          (rd.issues||[]).forEach(function(iss,ii){
+            if(typeof iss==='object'&&(iss.photos||[]).length){
+              iss.photos.forEach(function(p,pi){addPhoto(p,prefix+'/'+roomLabel+'/'+itemLabel,'问题照片_'+(ii+1)+'_'+(pi+1));});
+            }
+          });
+        });
+      });
+    }
+  });
+  if(count===0){alert('没有可导出的照片');return;}
+  var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  var fileName=(state.info.name||'数据中心')+'勘察照片备份.zip';
+  var file=new File([blob],fileName,{type:'application/zip'});
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:fileName}).then(function(){
+      showToast('✅ 分享成功');
+    }).catch(function(e){
+      if(e.name!=='AbortError') downloadBlob(blob,fileName);
+    });
+  }else{
+    downloadBlob(blob,fileName);
+  }
+}
+document.getElementById('btnExportPhotos').addEventListener('click',exportPhotoBackup);
+
+/* JSON Export */
+document.getElementById('btnExportJson').addEventListener('click', function(){
+  var jsonStr = JSON.stringify(state, function(key, val){
+    if(key === '_photoKeys') return undefined;
+    return val;
+  }, 2);
+  var blob = new Blob([jsonStr], {type:'application/json'});
+  var fileName = (state.info.name||'机房考察') + '_数据_' + (state.info.date||new Date().toISOString().slice(0,10)) + '.json';
+  var file = new File([blob], fileName, {type:'application/json'});
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file], title:fileName}).then(function(){
+      showToast('✅ 分享成功');
+    }).catch(function(e){
+      if(e.name!=='AbortError') downloadBlob(blob,fileName);
+    });
+  }else{
+    downloadBlob(blob,fileName);
+  }
+});
+
+/* JSON Import */
+function importSiteJSON(){
+  document.getElementById('importJsonFile').click();
+}
+window.importSiteJSON=importSiteJSON;
+function handleSiteJSONImport(e){
+  var input = e.target || this;
+  var file = input.files[0];
+  if(!file) return;
+  input.value = '';
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var data = JSON.parse(ev.target.result);
+      if(!data || typeof data !== 'object' || !data.info){
+        showToast('❌ 文件格式不正确');
+        return;
+      }
+      showModal('确认导入', '导入将覆盖当前所有数据，确定继续吗？', function(){
+        state = data;
+        migrateIssues(state);
+        saveState();
+        render();
+        showToast('✅ 数据导入成功');
+      });
+    }catch(err){
+      showToast('❌ 解析文件失败: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+window.handleSiteJSONImport=handleSiteJSONImport;
+function importSiteJSONFromText(){
+  var ta=document.getElementById('pasteJsonArea');
+  var txt=ta.value.trim();
+  if(!txt){showToast('❌ 请先粘贴JSON内容');return;}
+  try{
+    var data=JSON.parse(txt);
+    if(!data||typeof data!=='object'||!data.info){
+      showToast('❌ 文件格式不正确');
+      return;
+    }
+    showModal('确认导入','导入将覆盖当前所有数据，确定继续吗？',function(){
+      state=data;
+      migrateIssues(state);
+      saveState();
+      render();
+      showToast('✅ 数据导入成功');
+    });
+  }catch(err){
+    showToast('❌ 解析失败: '+err.message);
+  }
+}
+window.importSiteJSONFromText=importSiteJSONFromText;
+document.getElementById('btnCheckUpdate').addEventListener('click',function(){
+  showToast('🔄 正在检查更新...');
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(reg){
+        reg.update().then(function(){
+          showToast('✅ 已发现新版本，正在刷新...');
+          setTimeout(function(){location.reload();},1000);
+        }).catch(function(){
+          showToast('✅ 已是最新版本');
+        });
+      }else{
+        location.reload();
+      }
+    });
+  }else{
+    location.reload();
+  }
+});
+
+/* Cloud backup init */
+cloudUpdateStatus();
+var cloudAutoToggle=document.getElementById('cloudAutoUpload');
+if(localStorage.getItem('cloud_auto_upload')==='true') cloudAutoToggle.checked=true;
+cloudAutoToggle.addEventListener('change',function(){
+  localStorage.setItem('cloud_auto_upload',this.checked?'true':'false');
+});
+document.getElementById('cloudLoginCancel').addEventListener('click',function(){
+  document.getElementById('cloudLoginModal').classList.remove('show');
+});
+
+/* PWA */if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+/* Version badge - force update */
+document.getElementById('menuVer').addEventListener('click',function(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(reg){
+        reg.update().then(function(){
+          location.reload(true);
+        });
+      }else{
+        location.reload(true);
+      }
+    });
+  }else{
+    location.reload(true);
+  }
+});
+
+/* Init - Auth gated */
+// ============ AUTH Module (Simplified: uses dc_ops_token only, no local password storage) ============
+var AUTH={
+    APP_TITLE:'机房选址考察记录',
+    userName:null,
+
+    _enterApp:function(){
+        document.getElementById('authScreen').classList.add('hidden');
+        var menuAuthMgmt=document.getElementById('menuAuthMgmt');
+        if(menuAuthMgmt)menuAuthMgmt.style.display='none';
+        var menuLogout=document.getElementById('menuLogout');
+        if(menuLogout)menuLogout.style.display='';
+        var menuLogoutBtn=document.getElementById('menuLogout');
+        if(menuLogoutBtn){
+            menuLogoutBtn.onclick=function(){document.getElementById('moreMenu').classList.remove('show');AUTH.doLogout();};
+        }
+        render();
+        recalcCabinetSummary();
+        restorePhotosFromIDB();
+        bindInfoSectionToggle();
+    },
+
+    doLogout:function(){
+        localStorage.removeItem('dc_ops_cloud_token');
+        localStorage.removeItem('dc_ops_cloud_user');
+        localStorage.removeItem('dc_ops_cloud_auth_source');
+        window.location.href='/dc-ops-platform/';
+    },
+
+    _showNoTokenScreen:function(){
+        document.getElementById('authScreen').classList.remove('hidden');
+        var card=document.querySelector('#authScreen .auth-card');
+        if(card){
+            card.innerHTML='<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">🔒</div><h3 style="margin:0 0 8px;color:var(--text)">请从DC运维终端进入</h3><p style="color:var(--text2);font-size:13px;margin:0 0 24px">本应用需从DC运维终端跳转访问</p><a href="/dc-ops-platform/" style="display:inline-block;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;text-decoration:none;font-size:14px">返回DC运维终端</a></div>';
+        }
+    },
+
+    startAuthFlow:function(){
+        var self=this;
+        // Security: Clean up any old local auth data from previous versions
+        try{
+            localStorage.removeItem('auth_insp_permissions');
+            localStorage.removeItem('auth_insp_admin_pwd');
+            localStorage.removeItem('auth_insp_user_pwd');
+            localStorage.removeItem('auth_insp_session');
+            localStorage.removeItem('auth_insp_user_name');
+        }catch(e){}
+
+        var dcToken=localStorage.getItem('dc_ops_token')||localStorage.getItem('dc_ops_cloud_token')||new URLSearchParams(window.location.search).get('token');
+        if(dcToken){
+            localStorage.setItem('dc_ops_cloud_token',dcToken);
+            localStorage.setItem('dc_ops_cloud_auth_source','dc_ops');
+            if(window.history&&window.history.replaceState){
+                var cleanUrl=window.location.pathname+window.location.hash;
+                window.history.replaceState({},'',cleanUrl);
+            }
+            var savedUser=null;
+            try{savedUser=JSON.parse(localStorage.getItem('dc_ops_cloud_user'));}catch(e){}
+            self.userName=(savedUser&&savedUser.display_name)||'运维用户';
+            self._enterApp();
+            try{cloudUpdateStatus();}catch(e){}
+            fetch((window.location.origin||'')+'/dc-ops-platform/api/auth/me',{
+                headers:{'Authorization':'Bearer '+dcToken}
+            }).then(function(r){return r.json();}).then(function(d){
+                if(d.code===0&&d.data){
+                    localStorage.setItem('dc_ops_cloud_user',JSON.stringify(d.data));
+                    self.userName=d.data.display_name||d.data.username||'运维用户';
+                }
+            }).catch(function(){});
+            return;
+        }
+        self._showNoTokenScreen();
+    }
+};
+
+AUTH.startAuthFlow();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "机房巡检",
+  "short_name": "机房巡检",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#2563EB",
+  "icons": []
+}
