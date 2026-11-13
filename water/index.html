@@ -1025,7 +1025,7 @@ var AUTH={
         localStorage.removeItem('dc_ops_cloud_token');
         localStorage.removeItem('dc_ops_cloud_user');
         localStorage.removeItem('dc_ops_cloud_auth_source');
-        window.location.href='/dc-ops-platform/';
+        window.location.reload();
     },
 
     _showNoTokenScreen:function(){
@@ -1070,7 +1070,10 @@ var AUTH={
             }).catch(function(){});
             return;
         }
-        self._showNoTokenScreen();
+        /* PWA 独立部署：无主系统 token 时直接进入 */
+        self.userName='移动端用户';
+        self._enterApp();
+        return;
     }
 };
 
@@ -2123,7 +2126,7 @@ updateVoiceQuotaDisplay();
 
 // === 返回主页 ===
 function goHome(){
-  window.location.href='/dc-ops-platform/';
+  window.location.reload();
 }
 
 // === 问题生成 ===
