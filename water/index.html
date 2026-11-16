@@ -358,6 +358,7 @@ textarea.fi2{min-height:60px;resize:vertical;font-family:inherit}
   <button class="hdr-btn" id="btnMore" style="padding:6px 8px" title="更多">⋮</button>
   <div class="hdr-menu-list" id="hdrMenu">
     <button class="hdr-menu-item" onclick="exportWord();closeHdrMenu()"><span class="mi">📄</span>导出报告</button>
+    <button class="hdr-menu-item" onclick="shareReport();closeHdrMenu()"><span class="mi">📤</span>分享报告</button>
     <button class="hdr-menu-item" onclick="exportXlsx();closeHdrMenu()"><span class="mi">📥</span>导出Excel</button>
     <button class="hdr-menu-item" onclick="generateIssues();closeHdrMenu()"><span class="mi">🐛</span>问题生成</button>
     <div class="hdr-menu-divider"></div>
@@ -1714,24 +1715,34 @@ async function exportWord(){
     h=buildReportHTML();
     blob=new Blob([h],{type:'text/html;charset=utf-8'});
   }
+  var file=new File([blob],fileName,{type:'text/html;charset=utf-8'});
+  window.__reportFile=file;
   var sizeMB=(blob.size/1024/1024).toFixed(1);
-  showToast('📄 报告已生成('+sizeMB+'MB)，正在调起分享...');
-  setTimeout(function(){
-    var file=new File([blob],fileName,{type:'text/html;charset=utf-8'});
-    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      navigator.share({files:[file],title:fileName}).then(function(){
-        showToast('✅ 分享成功');
-      }).catch(function(e){
-        if(e.name==='AbortError')return;
-        showToast('❌ 分享未完成，已改为保存文件');
-        saveBlobFile(blob,fileName);
-      });
-    }else if(navigator.share){
-      navigator.share({title:fileName,text:'健康度评估报告已生成'}).catch(function(){});
-    }else{
-      saveBlobFile(blob,fileName);
-    }
-  },800);
+  saveBlobFile(blob,fileName);
+  showToast('✅ 报告已生成('+sizeMB+'MB)，点「📤 分享报告」可发到微信');
+}
+
+// iOS 要求分享必须在用户点击的同步调用栈里发起，不能有任何 await/setTimeout
+function shareReport(){
+  var f=window.__reportFile;
+  if(!f){showToast('⚠️ 请先点「📄 导出报告」生成报告');return;}
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){
+    navigator.share({files:[f],title:f.name}).then(function(){
+      showToast('✅ 已分享');
+    }).catch(function(e){
+      if(e.name==='AbortError'){showToast('已取消分享');return;}
+      showToast('❌ 分享失败：'+(e.message||e.name));
+    });
+    return;
+  }
+  if(navigator.share){
+    navigator.share({title:f.name,text:'健康度评估报告'}).then(function(){
+      showToast('✅ 已分享');
+    }).catch(function(e){if(e.name!=='AbortError')showToast('❌ 分享失败');});
+    return;
+  }
+  saveBlobFile(f,f.name);
+  showToast('当前环境不支持系统分享，已保存到文件');
 }
 // === Feature 1: Unfilled item check ===
 function checkUnfilled(){
