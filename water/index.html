@@ -1618,7 +1618,7 @@ function buildReportHTML(){
       var id=iid(c.k,i);
       var d=D.items[id]||{};
       if(!isFill(id))return;
-      var ph=D.photos[id]||[];
+      var ph=(window.__reportPhotos&&window.__reportPhotos[id])||D.photos[id]||[];
       var isP=d.isProblem!=='否';
       h+='<h3>'+(i+1)+'. '+eH(it.content)+'</h3>';
       if(d.status)h+='<p><b>评估现状：</b>'+eH(d.status)+'</p>';
@@ -1642,31 +1642,80 @@ function buildReportHTML(){
   return h;
 }
 
-function exportWord(){
+var __reportPhotos=null;
+function resizeImgForReport(src,maxW,quality){
+  return new Promise(function(resolve){
+    if(!src||src.indexOf('data:image')!==0){resolve(src);return;}
+    var img=new Image();
+    var timer=setTimeout(function(){resolve(src);},8000);
+    img.onload=function(){
+      clearTimeout(timer);
+      try{
+        var ratio=img.width>maxW?maxW/img.width:1;
+        var c=document.createElement('canvas');
+        c.width=Math.round(img.width*ratio);c.height=Math.round(img.height*ratio);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        resolve(c.toDataURL('image/jpeg',quality));
+      }catch(e){resolve(src);}
+    };
+    img.onerror=function(){clearTimeout(timer);resolve(src);};
+    img.src=src;
+  });
+}
+async function prepareReportPhotos(quality){
+  var keys=Object.keys(D.photos||{});
+  var total=0;keys.forEach(function(k){total+=(D.photos[k]||[]).length;});
+  if(!total)return 0;
+  var out={},done=0;
+  for(var i=0;i<keys.length;i++){
+    var arr=D.photos[keys[i]]||[],res=[];
+    for(var j=0;j<arr.length;j++){
+      done++;
+      if(done%2===0)showToast('⏳ 压缩照片 '+done+'/'+total);
+      res.push(await resizeImgForReport(arr[j],900,quality));
+    }
+    out[keys[i]]=res;
+  }
+  __reportPhotos=out;
+  return total;
+}
+function saveBlobFile(blob,fileName){
+  try{
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download=fileName;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    showToast('✅ 报告已保存到文件');
+  }catch(e){showToast('❌ 保存失败，请用电脑导出');}
+}
+async function exportWord(){
+  var count=0;Object.keys(D.photos||{}).forEach(function(k){count+=(D.photos[k]||[]).length;});
+  if(count>0){
+    showToast('⏳ 共 '+count+' 张照片，压缩后生成报告...');
+    await prepareReportPhotos(0.66);
+  }
   var h=buildReportHTML();
   var fileName=(D.info.dc_name||'数据中心')+'健康度评估报告.html';
   var blob=new Blob([h],{type:'text/html;charset=utf-8'});
-  var file=new File([blob],fileName,{type:'text/html;charset=utf-8'});
   var sizeMB=(blob.size/1024/1024).toFixed(1);
-  showToast('📄 报告生成完成('+sizeMB+'MB)，正在分享...');
+  showToast('📄 报告已生成('+sizeMB+'MB)，正在调起分享...');
   setTimeout(function(){
+    var file=new File([blob],fileName,{type:'text/html;charset=utf-8'});
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
       navigator.share({files:[file],title:fileName}).then(function(){
         showToast('✅ 分享成功');
       }).catch(function(e){
-        if(e.name!=='AbortError')showToast('❌ 分享失败');
+        if(e.name==='AbortError')return;
+        showToast('❌ 分享未完成，已改为保存文件');
+        saveBlobFile(blob,fileName);
       });
     }else if(navigator.share){
       navigator.share({title:fileName,text:'健康度评估报告已生成'}).catch(function(){});
     }else{
-      var url=URL.createObjectURL(blob);
-      var a=document.createElement('a');a.href=url;a.download=fileName;a.click();
-      URL.revokeObjectURL(url);
-      showToast('✅ 报告已下载');
+      saveBlobFile(blob,fileName);
     }
   },800);
 }
-
 // === Feature 1: Unfilled item check ===
 function checkUnfilled(){
   var list=[];
