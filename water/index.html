@@ -1731,14 +1731,15 @@ function shareReport(){
       showToast('✅ 已分享');
     }).catch(function(e){
       if(e.name==='AbortError'){showToast('已取消分享');return;}
-      showToast('❌ 分享失败：'+(e.message||e.name));
+      saveBlobFile(f,f.name);
+      showToast('系统分享不可用（'+(e.message||e.name)+'），已保存到文件');
     });
     return;
   }
   if(navigator.share){
     navigator.share({title:f.name,text:'健康度评估报告'}).then(function(){
       showToast('✅ 已分享');
-    }).catch(function(e){if(e.name!=='AbortError')showToast('❌ 分享失败');});
+    }).catch(function(e){if(e.name!=='AbortError'){saveBlobFile(f,f.name);showToast('系统分享不可用，已保存到文件');}});
     return;
   }
   saveBlobFile(f,f.name);
