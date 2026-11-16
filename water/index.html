@@ -1662,7 +1662,7 @@ function resizeImgForReport(src,maxW,quality){
     img.src=src;
   });
 }
-async function prepareReportPhotos(quality){
+async function prepareReportPhotos(quality,maxW){
   var keys=Object.keys(D.photos||{});
   var total=0;keys.forEach(function(k){total+=(D.photos[k]||[]).length;});
   if(!total)return 0;
@@ -1672,7 +1672,7 @@ async function prepareReportPhotos(quality){
     for(var j=0;j<arr.length;j++){
       done++;
       if(done%2===0)showToast('⏳ 压缩照片 '+done+'/'+total);
-      res.push(await resizeImgForReport(arr[j],900,quality));
+      res.push(await resizeImgForReport(arr[j],maxW||900,quality));
     }
     out[keys[i]]=res;
   }
@@ -1697,6 +1697,12 @@ async function exportWord(){
   var h=buildReportHTML();
   var fileName=(D.info.dc_name||'数据中心')+'健康度评估报告.html';
   var blob=new Blob([h],{type:'text/html;charset=utf-8'});
+  if(blob.size>12*1024*1024){
+    showToast('⚠️ 报告较大，正在二次压缩...');
+    await prepareReportPhotos(0.5,700);
+    h=buildReportHTML();
+    blob=new Blob([h],{type:'text/html;charset=utf-8'});
+  }
   var sizeMB=(blob.size/1024/1024).toFixed(1);
   showToast('📄 报告已生成('+sizeMB+'MB)，正在调起分享...');
   setTimeout(function(){
