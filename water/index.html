@@ -472,7 +472,7 @@ textarea.fi2{min-height:60px;resize:vertical;font-family:inherit}
 <div class="cloud-modal-overlay" id="voiceModal">
   <div class="cloud-modal-box" style="max-width:340px;text-align:left">
     <h4 style="text-align:center;margin-bottom:10px">🎙️ 讯飞语音设置</h4>
-    <div style="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:10px">在讯飞开放平台（xfyun.cn）创建应用，开通「语音听写（流式版）」，把下面三项填进来。密钥只保存在这台手机的浏览器里，不会上传到任何服务器。</div>
+    <div style="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:10px">已内置一套可用密钥，不填也能直接用。如果额度经常被用完（同一套额度所有设备共享），可以换成你自己在讯飞开放平台（xfyun.cn）申请的密钥——开通「语音听写（流式版）」即可。填写的值只存在这台手机本地。</div>
     <div class="form-group"><label>AppID</label><input id="xfCfgAppId" placeholder="例如 1234abcd" autocomplete="off"></div>
     <div class="form-group"><label>APIKey</label><input id="xfCfgApiKey" placeholder="32位字符" autocomplete="off"></div>
     <div class="form-group"><label>APISecret</label><input id="xfCfgApiSecret" placeholder="32位字符" autocomplete="off"></div>
@@ -1981,9 +1981,15 @@ function exportPhotos(){
 
 // === iFlytek Voice ASR Engine ===
 var xfAppId=null;
+var XF_DEFAULT_CFG=(function(){
+  try{
+    return {appId:atob('NzE2MjJhZGE='),apiKey:atob('NDQzNTg5NDg1NDgxMzM4OTliMWUzY2QzZmZjNjJkZDA='),apiSecret:atob('WmpVM01tRXhaR05oWWpka1ptUXdNRGN5TWpVME1EYzM=')};
+  }catch(e){return null;}
+})();
 function openVoiceSettings(){
   var cfg={};
   try{cfg=JSON.parse(localStorage.getItem('xf_cfg')||'{}')||{};}catch(e){}
+  if(!cfg.appId&&XF_DEFAULT_CFG)cfg=XF_DEFAULT_CFG;
   document.getElementById('xfCfgAppId').value=cfg.appId||'';
   document.getElementById('xfCfgApiKey').value=cfg.apiKey||'';
   document.getElementById('xfCfgApiSecret').value=cfg.apiSecret||'';
@@ -2035,6 +2041,7 @@ function updateVoiceQuotaDisplay(){
 async function xfAuthUrl(){
   var cfg=null;
   try{cfg=JSON.parse(localStorage.getItem('xf_cfg')||'null');}catch(e){}
+  if(!cfg||!cfg.appId||!cfg.apiKey||!cfg.apiSecret)cfg=XF_DEFAULT_CFG;
   if(cfg&&cfg.appId&&cfg.apiKey&&cfg.apiSecret){
     try{xfAppId=cfg.appId;return await buildXFUrl(cfg);}catch(e){console.error('build xf url error:',e);}
   }
@@ -2351,7 +2358,7 @@ async function doGenerateIssues(items,dcName,dcAm,dcAmPhone,dcAmEmail,dcManager,
     3. 再次点击结束，文字插入光标位置<br>
     • 数字输入框自动将语音转数字<br>
     • 按钮右上角显示当日剩余次数（500次/天）<br>
-    • 语音密钥请在 ⋯ 菜单 →「🎙️ 语音设置」里填写（讯飞开放平台自建应用，只存本机）
+    • 语音默认已内置密钥，开箱即用；如需换自己的，⋯ 菜单 →「🎙️ 语音设置」
     • 未填密钥时自动降级为浏览器语音（iPhone 上浏览器语音通常不可用）<br><br>
     <b>📥 导出功能</b><br>
     • 📄 <b>报告</b> — 生成HTML报告<br>
