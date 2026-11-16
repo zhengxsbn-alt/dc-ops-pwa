@@ -1,4 +1,4 @@
-var CACHE_NAME = 'dc-health-pwa-v25';
+var CACHE_NAME = 'dc-health-pwa-v26';
 var STATIC_ASSETS = [
   './',
   './index.html',

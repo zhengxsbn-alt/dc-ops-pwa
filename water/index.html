@@ -361,6 +361,7 @@ textarea.fi2{min-height:60px;resize:vertical;font-family:inherit}
     <button class="hdr-menu-item" onclick="exportXlsx();closeHdrMenu()"><span class="mi">📥</span>导出Excel</button>
     <button class="hdr-menu-item" onclick="generateIssues();closeHdrMenu()"><span class="mi">🐛</span>问题生成</button>
     <div class="hdr-menu-divider"></div>
+    <button class="hdr-menu-item" onclick="openVoiceSettings();closeHdrMenu()"><span class="mi">🎙️</span>语音设置</button>
     <button class="hdr-menu-item" onclick="showHelpModal();closeHdrMenu()"><span class="mi">❓</span>使用说明</button>
     <button class="hdr-menu-item" onclick="checkUpdate();closeHdrMenu()"><span class="mi">🔄</span>v4 (检查更新)</button>
     <div class="hdr-menu-divider"></div>
@@ -468,6 +469,16 @@ textarea.fi2{min-height:60px;resize:vertical;font-family:inherit}
   </div>
 </div>
 <!-- Confirm modal -->
+<div class="cloud-modal-overlay" id="voiceModal">
+  <div class="cloud-modal-box" style="max-width:340px;text-align:left">
+    <h4 style="text-align:center;margin-bottom:10px">🎙️ 讯飞语音设置</h4>
+    <div style="font-size:12px;color:#6B7280;line-height:1.6;margin-bottom:10px">在讯飞开放平台（xfyun.cn）创建应用，开通「语音听写（流式版）」，把下面三项填进来。密钥只保存在这台手机的浏览器里，不会上传到任何服务器。</div>
+    <div class="form-group"><label>AppID</label><input id="xfCfgAppId" placeholder="例如 1234abcd" autocomplete="off"></div>
+    <div class="form-group"><label>APIKey</label><input id="xfCfgApiKey" placeholder="32位字符" autocomplete="off"></div>
+    <div class="form-group"><label>APISecret</label><input id="xfCfgApiSecret" placeholder="32位字符" autocomplete="off"></div>
+    <div class="btn-row"><button class="btn btn-outline" onclick="closeVoiceSettings()">取消</button><button class="btn btn-primary" onclick="saveVoiceSettings()">保存</button></div>
+  </div>
+</div>
 <div class="cloud-modal-overlay" id="confirmModal">
   <div class="cloud-modal-box">
     <h4 id="confirmTitle">确认</h4>
@@ -1970,6 +1981,36 @@ function exportPhotos(){
 
 // === iFlytek Voice ASR Engine ===
 var xfAppId=null;
+function openVoiceSettings(){
+  var cfg={};
+  try{cfg=JSON.parse(localStorage.getItem('xf_cfg')||'{}')||{};}catch(e){}
+  document.getElementById('xfCfgAppId').value=cfg.appId||'';
+  document.getElementById('xfCfgApiKey').value=cfg.apiKey||'';
+  document.getElementById('xfCfgApiSecret').value=cfg.apiSecret||'';
+  document.getElementById('voiceModal').classList.add('show');
+}
+function closeVoiceSettings(){document.getElementById('voiceModal').classList.remove('show')}
+function saveVoiceSettings(){
+  var a=document.getElementById('xfCfgAppId').value.trim();
+  var k=document.getElementById('xfCfgApiKey').value.trim();
+  var sc=document.getElementById('xfCfgApiSecret').value.trim();
+  if(!a||!k||!sc){showToast('❌ 三项都要填写');return;}
+  localStorage.setItem('xf_cfg',JSON.stringify({appId:a,apiKey:k,apiSecret:sc}));
+  closeVoiceSettings();
+  showToast('✅ 语音密钥已保存到本机');
+}
+async function buildXFUrl(cfg){
+  var host='iat-api.xfyun.cn',path='/v2/iat';
+  var date=new Date().toUTCString();
+  var origin='host: '+host+'\ndate: '+date+'\nGET '+path+' HTTP/1.1';
+  var enc=new TextEncoder();
+  var key=await crypto.subtle.importKey('raw',enc.encode(cfg.apiSecret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  var sigBuf=await crypto.subtle.sign('HMAC',key,enc.encode(origin));
+  var bytes=new Uint8Array(sigBuf),bin='';
+  for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+  var authOrigin='api_key="'+cfg.apiKey+'", algorithm="hmac-sha256", headers="host date request-line", signature="'+btoa(bin)+'"';
+  return 'wss://'+host+path+'?authorization='+encodeURIComponent(btoa(authOrigin))+'&date='+encodeURIComponent(date)+'&host='+host;
+}
 
 function getVoiceQuota(){
   var q=localStorage.getItem('xf_quota');
@@ -1992,6 +2033,11 @@ function updateVoiceQuotaDisplay(){
 }
 
 async function xfAuthUrl(){
+  var cfg=null;
+  try{cfg=JSON.parse(localStorage.getItem('xf_cfg')||'null');}catch(e){}
+  if(cfg&&cfg.appId&&cfg.apiKey&&cfg.apiSecret){
+    try{xfAppId=cfg.appId;return await buildXFUrl(cfg);}catch(e){console.error('build xf url error:',e);}
+  }
   try{
     var dcToken=localStorage.getItem('dc_ops_token')||localStorage.getItem('dc_ops_cloud_token');
     var resp=await fetch(CLOUD_BACKEND_URL.replace('/backup','/voice/token'),{headers:dcToken?{'Authorization':'Bearer '+dcToken}:{}});
@@ -2004,14 +2050,14 @@ async function xfAuthUrl(){
   return null;
 }
 
-var xfWs=null,xfAudioCtx=null,xfProcessor=null,xfTargetInput=null,xfStream=null,xfCurSent='',xfFixedText='',xfBeforeText='',xfAfterText='',xfInsertPos=0;
+var xfWs=null,xfAudioCtx=null,xfProcessor=null,xfTargetInput=null,xfStream=null,xfCurSent='',xfFixedText='',xfBeforeText='',xfAfterText='',xfInsertPos=0,xfPcmBuf=[];
 
 function startXFVoice(targetEl){
   var q=getVoiceQuota();
   if(q.used>=500){showToast('⚠️ 今日讯飞语音额度已用完(500次)，已切换浏览器语音');startBrowserVoice(targetEl);return;}
   if(!targetEl){return;}
   xfTargetInput=targetEl;
-  xfCurSent='';xfFixedText='';
+  xfCurSent='';xfFixedText='';xfPcmBuf=[];
   var isNum=targetEl.type==='number';
   if(isNum){
     xfBeforeText='';xfAfterText='';
@@ -2022,13 +2068,14 @@ function startXFVoice(targetEl){
   }
   navigator.mediaDevices.getUserMedia({audio:{channelCount:1,sampleRate:16000,echoCancellation:true,noiseSuppression:true}}).then(function(stream){
     xfStream=stream;
-    xfAudioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+    xfAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(xfAudioCtx.state==='suspended')xfAudioCtx.resume();
     var src=xfAudioCtx.createMediaStreamSource(stream);
     xfProcessor=xfAudioCtx.createScriptProcessor(4096,1,1);
     src.connect(xfProcessor);
     xfProcessor.connect(xfAudioCtx.destination);
     xfAuthUrl().then(function(wsUrl){
-      if(!wsUrl){showToast('⚠️ 语音服务未配置，已切换浏览器语音');startBrowserVoice(targetEl);stopXFVoice();return;}
+      if(!wsUrl){showToast('⚠️ 请先到 ⋯ 菜单 →「🎙️ 语音设置」填入讯飞密钥');startBrowserVoice(targetEl);stopXFVoice();return;}
       try{xfWs=new WebSocket(wsUrl);}catch(e){showToast('❌ 语音连接失败');stopXFVoice();return;}
       xfWs.onopen=function(){
         var frame={common:{app_id:xfAppId},business:{language:'zh_cn',domain:'iat',accent:'mandarin',vad_eos:8000,dwa:'wpgs'},data:{status:0,format:'audio/L16;rate=16000',encoding:'raw'}};
@@ -2073,10 +2120,24 @@ function startXFVoice(targetEl){
     xfProcessor.onaudioprocess=function(e){
       if(xfWs&&xfWs.readyState===1){
         var pcm=e.inputBuffer.getChannelData(0);
-        var int16=new Int16Array(pcm.length);
-        for(var i=0;i<pcm.length;i++){var s=Math.max(-1,Math.min(1,pcm[i]));int16[i]=s<0?s*0x8000:s*0x7FFF;}
-        var b64=arrayBufferToBase64(int16.buffer);
-        xfWs.send(JSON.stringify({data:{status:1,format:'audio/L16;rate=16000',encoding:'raw',audio:b64}}));
+        var sr=(xfAudioCtx&&xfAudioCtx.sampleRate)||44100;
+        var ratio=sr/16000;
+        if(ratio<=0)ratio=1;
+        var outLen=Math.max(1,Math.floor(pcm.length/ratio));
+        for(var i=0;i<outLen;i++){
+          var st=Math.floor(i*ratio),en=Math.min(pcm.length,Math.floor((i+1)*ratio));
+          var cnt=en-st;if(cnt<1){cnt=1;en=st+1;}
+          var sum=0;
+          for(var j=st;j<en;j++)sum+=pcm[j];
+          var v=Math.max(-1,Math.min(1,sum/cnt));
+          xfPcmBuf.push(v<0?v*0x8000:v*0x7FFF);
+        }
+        while(xfPcmBuf.length>=640){
+          var chunk=xfPcmBuf.splice(0,640);
+          var int16=new Int16Array(chunk);
+          var b64=arrayBufferToBase64(int16.buffer);
+          xfWs.send(JSON.stringify({data:{status:1,format:'audio/L16;rate=16000',encoding:'raw',audio:b64}}));
+        }
       }
     };
     });
@@ -2290,7 +2351,8 @@ async function doGenerateIssues(items,dcName,dcAm,dcAmPhone,dcAmEmail,dcManager,
     3. 再次点击结束，文字插入光标位置<br>
     • 数字输入框自动将语音转数字<br>
     • 按钮右上角显示当日剩余次数（500次/天）<br>
-    • 配额用完自动降级为浏览器语音<br><br>
+    • 语音密钥请在 ⋯ 菜单 →「🎙️ 语音设置」里填写（讯飞开放平台自建应用，只存本机）
+    • 未填密钥时自动降级为浏览器语音（iPhone 上浏览器语音通常不可用）<br><br>
     <b>📥 导出功能</b><br>
     • 📄 <b>报告</b> — 生成HTML报告<br>
     • 📥 <b>Excel</b> — 导出Excel问题汇总<br>
